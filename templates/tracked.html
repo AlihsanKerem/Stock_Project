@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takip Edilenler - Antigravity Stock Scanner</title>
+    <!-- Modern Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .add-stock-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .add-stock-form input, .add-stock-form select {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .add-stock-form input {
+            flex: 1;
+        }
+
+        .market-select {
+            width: 220px;
+            cursor: pointer;
+        }
+        
+        .market-select option {
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+        
+        .add-stock-form input:focus, .add-stock-form select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+        
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        #messageBox {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .msg-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .msg-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">👀</span>
+                <h1>Takip Listesi</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-link">Ana Sayfa</a>
+                <a href="/hisse-analiz" class="nav-link">Tekli Hisse Analizi</a>
+                <a href="/takip" class="nav-link active">Takip Listesi</a>
+            </nav>
+        </header>
+
+        <main>
+            <div id="messageBox"></div>
+
+            <form id="addStockForm" class="add-stock-form">
+                <select id="marketType" class="market-select">
+                    <option value=".IS">🇹🇷 BIST (Türk Hisseleri)</option>
+                    <option value="">🇺🇸 ABD Hisseleri</option>
+                    <option value="-USD">🪙 Kripto Paralar</option>
+                    <option value="CUSTOM">🔧 Özel / Diğer</option>
+                </select>
+                <input type="text" id="newSymbolInput" placeholder="Hisse Kodu (Örn: THYAO, AAPL, BTC)..." required>
+                <button type="submit" class="btn" id="addBtn">Listeye Ekle</button>
+            </form>
+
+            <div class="table-container">
+                <table id="trackedTable">
+                    <thead>
+                        <tr>
+                            <th>Hisse Kodu</th>
+                            <th>Son Fiyat (₺ / $)</th>
+                            <th>Son Güncellenme</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trackedTableBody">
+                        <tr class="loading-row">
+                            <td colspan="4">Veriler yükleniyor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Takip edilen hisseler düzenli olarak kontrol edilir ve <span class="highlight">Telegram'dan</span> bildirim gönderilir.</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/tracked.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+yfinance==0.2.37
+pandas==2.2.1
+pandas-ta==0.3.14b0
+python-dotenv==1.0.1
+schedule==1.2.1
+flask==3.0.2
+google-generativeai==0.4.1

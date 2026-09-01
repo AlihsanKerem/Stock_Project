@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIST100 - Antigravity Stock Scanner</title>
+    <!-- Modern Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">📈</span>
+                <h1>BIST100 Sinyal Tarayıcı</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-link active">Ana Sayfa</a>
+                <a href="/hisse-analiz" class="nav-link">Tekli Hisse Analizi</a>
+                <a href="/takip" class="nav-link">Takip Listesi</a>
+            </nav>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Hisse Ara (Örn: THYAO)...">
+            </div>
+        </header>
+
+        <main>
+            <div class="table-container">
+                <table id="stockTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="symbol">Hisse Kodu</th>
+                            <th data-sort="price">Fiyat (₺)</th>
+                            <th data-sort="rsi">RSI (14)</th>
+                            <th data-sort="pb_ratio">PD/DD</th>
+                            <th data-sort="pe_ratio">F/K</th>
+                            <th data-sort="div_yield">Temettü (%)</th>
+                            <th data-sort="signals">Sinyaller</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Veriler JavaScript ile buraya eklenecek -->
+                        <tr class="loading-row">
+                            <td colspan="7">Veriler yükleniyor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Veriler günlük olarak <span class="highlight">SQLite</span> veritabanına kaydedilir ve buradan okunur.</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
