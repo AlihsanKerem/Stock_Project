@@ -3,11 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Takip Edilenler - Antigravity Stock Scanner</title>
+    <title>Takip Listesi & Alarmlar - Antigravity Stock Scanner</title>
     <!-- Modern Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        .tabs-header {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.85rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
         .add-stock-form {
             display: flex;
             gap: 1rem;
@@ -16,6 +56,7 @@
             padding: 1.5rem;
             border-radius: 12px;
             border: 1px solid var(--border);
+            flex-wrap: wrap;
         }
         
         .add-stock-form input, .add-stock-form select {
@@ -30,6 +71,7 @@
         
         .add-stock-form input {
             flex: 1;
+            min-width: 200px;
         }
 
         .market-select {
@@ -49,33 +91,126 @@
         
         .btn {
             background: var(--accent);
-            color: #fff;
+            color: #0b1120;
             border: none;
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
         
         .btn:hover {
             background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.6rem 1.1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-alarm {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-right: 0.5rem;
+        }
+
+        .btn-alarm:hover {
+            background: rgba(56, 189, 248, 0.25);
+            color: #fff;
         }
 
         .btn-danger {
             background: rgba(239, 68, 68, 0.1);
             color: var(--danger);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
         }
         
         .btn-danger:hover {
             background: rgba(239, 68, 68, 0.2);
         }
+
+        .btn-fetch-price {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .btn-fetch-price:hover {
+            background: rgba(56, 189, 248, 0.25);
+            color: #fff;
+        }
+
+        .quick-pct-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-pct-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .quick-pct-btn.up {
+            color: #10b981;
+        }
+
+        .quick-pct-btn.down {
+            color: #ef4444;
+        }
         
         #messageBox {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             padding: 1rem;
             border-radius: 8px;
             display: none;
@@ -92,6 +227,130 @@
             border: 1px solid var(--danger);
             color: var(--danger);
         }
+
+        .badge-status {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .badge-active {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .badge-triggered {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: #161926;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 480px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .info-box {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -99,50 +358,158 @@
         <header>
             <div class="logo">
                 <span class="logo-icon">👀</span>
-                <h1>Takip Listesi</h1>
+                <h1>Takip Listesi & Alarmlar</h1>
             </div>
             <nav class="nav-menu">
                 <a href="/" class="nav-link">Ana Sayfa</a>
+                <a href="/portfolio" class="nav-link">💼 Portföy</a>
                 <a href="/hisse-analiz" class="nav-link">Tekli Hisse Analizi</a>
-                <a href="/takip" class="nav-link active">Takip Listesi</a>
+                <a href="/takip" class="nav-link active">👀 Takip & Alarmlar</a>
             </nav>
         </header>
 
         <main>
             <div id="messageBox"></div>
 
-            <form id="addStockForm" class="add-stock-form">
-                <select id="marketType" class="market-select">
-                    <option value=".IS">🇹🇷 BIST (Türk Hisseleri)</option>
-                    <option value="">🇺🇸 ABD Hisseleri</option>
-                    <option value="-USD">🪙 Kripto Paralar</option>
-                    <option value="CUSTOM">🔧 Özel / Diğer</option>
-                </select>
-                <input type="text" id="newSymbolInput" placeholder="Hisse Kodu (Örn: THYAO, AAPL, BTC)..." required>
-                <button type="submit" class="btn" id="addBtn">Listeye Ekle</button>
-            </form>
+            <!-- Tabs Navigation -->
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="trackedTab">
+                    👀 Takip Edilen Hisseler (<span id="trackedCount">0</span>)
+                </button>
+                <button class="tab-btn" data-tab="alertsTab">
+                    🔔 Fiyat Alarmlarım (<span id="alertsCount">0</span>)
+                </button>
+            </div>
 
-            <div class="table-container">
-                <table id="trackedTable">
-                    <thead>
-                        <tr>
-                            <th>Hisse Kodu</th>
-                            <th>Son Fiyat (₺ / $)</th>
-                            <th>Son Güncellenme</th>
-                            <th>İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody id="trackedTableBody">
-                        <tr class="loading-row">
-                            <td colspan="4">Veriler yükleniyor...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Tab 1: Takip Edilen Hisseler -->
+            <div id="trackedTab" class="tab-content active">
+                <form id="addStockForm" class="add-stock-form">
+                    <select id="marketType" class="market-select">
+                        <option value=".IS">🇹🇷 BIST (Türk Hisseleri - .IS)</option>
+                        <option value="">🇺🇸 ABD Hisseleri</option>
+                        <option value="-USD">🪙 Kripto Paralar</option>
+                        <option value="CUSTOM">🔧 Özel / Diğer</option>
+                    </select>
+                    <input type="text" id="newSymbolInput" placeholder="Hisse Kodu (Örn: THYAO, AAPL, BTC)..." required style="text-transform: uppercase;">
+                    <button type="submit" class="btn" id="addBtn">➕ Listeye Ekle</button>
+                </form>
+
+                <div class="table-container">
+                    <table id="trackedTable">
+                        <thead>
+                            <tr>
+                                <th>Hisse Kodu</th>
+                                <th>Son Fiyat (₺ / $)</th>
+                                <th>Son Güncellenme</th>
+                                <th style="text-align: center;">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trackedTableBody">
+                            <tr class="loading-row">
+                                <td colspan="4" style="text-align: center;">Veriler yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Fiyat Alarmları -->
+            <div id="alertsTab" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <button class="btn" id="openDirectAlertBtn">
+                        <span>⏰</span> Yeni Fiyat Alarmı Kur
+                    </button>
+                    <button class="btn-outline" id="refreshAlertsBtn">
+                        🔄 Alarmları Yenile
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="alertsTable">
+                        <thead>
+                            <tr>
+                                <th>Hisse</th>
+                                <th>Referans Fiyat</th>
+                                <th>Hedef Değişim (%)</th>
+                                <th>Hedef Fiyat</th>
+                                <th>Yön</th>
+                                <th>Durum</th>
+                                <th>Kurulma Tarihi</th>
+                                <th>Not</th>
+                                <th style="text-align: center;">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertsTableBody">
+                            <tr class="loading-row">
+                                <td colspan="9" style="text-align: center;">Alarmlar yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
-        
+
+        <!-- ⏰ Alarm Kurma Modalı -->
+        <div id="alertModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>⏰ Fiyat Alarmı Kur</h3>
+                    <button class="modal-close" id="closeAlertModalBtn">&times;</button>
+                </div>
+                <form id="alertForm">
+                    <div class="form-group">
+                        <label for="alertSymbol">Hisse Kodu</label>
+                        <input type="text" id="alertSymbol" placeholder="Örn: THYAO" required style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="alertRefPrice" style="margin-bottom: 0;">Referans / Baz Fiyat (₺)</label>
+                            <button type="button" id="fetchAlertRefPriceBtn" class="btn-fetch-price">
+                                ⚡ Canlı Fiyatı Getir
+                            </button>
+                        </div>
+                        <input type="number" id="alertRefPrice" placeholder="Örn: 300.00" min="0.01" step="0.01" required>
+                    </div>
+
+                    <!-- Hızlı Yüzde Butonları -->
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Hızlı Yüzde Eşikleri:</label>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" class="quick-pct-btn up" data-pct="3">+%3 Artarsa</button>
+                            <button type="button" class="quick-pct-btn up" data-pct="5">+%5 Artarsa</button>
+                            <button type="button" class="quick-pct-btn up" data-pct="10">+%10 Artarsa</button>
+                            <button type="button" class="quick-pct-btn down" data-pct="-3">-%3 Düşerse</button>
+                            <button type="button" class="quick-pct-btn down" data-pct="-5">-%5 Düşerse</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alertTargetPct">Hedef Değişim Oranı (%)</label>
+                        <input type="number" id="alertTargetPct" placeholder="Örn: 5.0 (veya -3.0)" step="0.1" required>
+                    </div>
+
+                    <!-- Canlı Hedef Fiyat Önizleme -->
+                    <div class="info-box" id="alertPreviewBox" style="display: none;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Tetiklenme Eşik Fiyatı:</div>
+                        <div id="alertPreviewPrice" style="font-size: 1.25rem; font-weight: 700; color: #38bdf8;">₺0.00</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alertNotes">Notunuz (Opsiyonel)</label>
+                        <input type="text" id="alertNotes" placeholder="Örn: Direnci kırarsa bildir">
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" id="cancelAlertBtn">İptal</button>
+                        <button type="submit" class="btn" id="saveAlertBtn">Alarmı Kur</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <footer>
-            <p>Takip edilen hisseler düzenli olarak kontrol edilir ve <span class="highlight">Telegram'dan</span> bildirim gönderilir.</p>
+            <p>Takip edilen hisseler ve fiyat alarmları düzenli kontrol edilir; eşik aşıldığında <span class="highlight">Telegram Botu</span> üzerinden anında bildirim gönderilir.</p>
         </footer>
     </div>
 

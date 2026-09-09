@@ -21,12 +21,19 @@ def analyze_stock(symbol):
     try:
         # Hisse senedini yfinance üzerinden çek
         ticker = yf.Ticker(symbol)
-        info = ticker.info
+        try:
+            info = ticker.info or {}
+        except Exception:
+            info = {}
         
         # Günlük fiyat geçmişini çek (Son 6 ay, hacim ortalaması için yeterli)
-        df = ticker.history(period="6mo")
+        try:
+            df = ticker.history(period="6mo")
+        except Exception as he:
+            print(f"{symbol} geçmiş verisi çekilemedi: {he}")
+            return None
         
-        if df.empty or len(df) < 60:
+        if df is None or df.empty or len(df) < 60:
             return None
             
         # 1. Teknik Analiz (RSI ve Hacim)
@@ -89,62 +96,103 @@ def analyze_stock(symbol):
         signals = []
         signal_names = []
         
-        # Sinyal 1: Değer (Ucuzluk) Avcısı Sinyali
+        # Sinyal 1: Değer (Ucuzluk) Avcısı Sinyali (Uzun Vade)
         # PD/DD <= 1 VE RSI < 30
         if pb_ratio is not None and pb_ratio <= 1.0 and current_rsi is not None and current_rsi < 30:
-            signals.append({
+            sig = {
                 "symbol": symbol,
                 "type": "deger_avcisi",
+                "name": "Değer Avcısı",
+                "timeframe_key": "LONG",
+                "timeframe_label": "💎 Uzun Vade (Değer)",
+                "target_return": "%15 - %30+",
+                "risk_level": "Düşük / Orta",
+                "price_at_signal": round(current_price, 2),
+                "rsi": round(current_rsi, 2) if current_rsi else None,
                 "message": f"🚨 Değer Avcısı: {symbol.replace('.IS', '')} temel olarak ucuz (PD/DD: {pb_ratio:.2f}) ve teknik olarak aşırı satım bölgesinde (RSI: {current_rsi:.2f}). İncelemeye değer!"
-            })
+            }
+            signals.append(sig)
             signal_names.append("Değer Avcısı")
             
-        # Sinyal 2: Dönüş ve Hacim Onayı Sinyali
+        # Sinyal 2: Dönüş ve Hacim Onayı Sinyali (Kısa Vade)
         # Kapanış artıda VE işlem hacmi 3 aylık ortalamanın üzerinde
         if price_up and current_volume > volume_ma60:
-            signals.append({
+            sig = {
                 "symbol": symbol,
                 "type": "hacim_onayi",
+                "name": "Hacim Patlaması",
+                "timeframe_key": "SHORT",
+                "timeframe_label": "⚡ Kısa Vade (1-7 Gün)",
+                "target_return": "%3 - %7",
+                "risk_level": "Orta",
+                "price_at_signal": round(current_price, 2),
+                "rsi": round(current_rsi, 2) if current_rsi else None,
                 "message": f"🔥 Hacim Patlaması: {symbol.replace('.IS', '')} artan hacimle yükselişe geçti. Olası bir trend dönüşü (onayı) olabilir."
-            })
+            }
+            signals.append(sig)
             signal_names.append("Hacim Patlaması")
             
-        # Sinyal 3: Uzun Vadeli Temettü Kalesi Sinyali
-        # Temettü > %10 VE F/K < 15 (Makul sınır varsayımı)
-        if div_yield is not None and div_yield > 10.0 and pe_ratio is not None and pe_ratio < 15.0:
-            signals.append({
+        # Sinyal 3: Uzun Vadeli Temettü Kalesi Sinyali (Uzun Vade)
+        # Temettü > %5 VE F/K < 15
+        if div_yield is not None and div_yield > 5.0 and pe_ratio is not None and pe_ratio < 15.0:
+            sig = {
                 "symbol": symbol,
                 "type": "temettu_kalesi",
+                "name": "Temettü Kalesi",
+                "timeframe_key": "LONG",
+                "timeframe_label": "💎 Uzun Vade (Temettü)",
+                "target_return": "%10 - %25+",
+                "risk_level": "Düşük",
+                "price_at_signal": round(current_price, 2),
+                "rsi": round(current_rsi, 2) if current_rsi else None,
                 "message": f"🏦 Temettü Kalesi: {symbol.replace('.IS', '')} yüksek temettü verimine sahip (%{div_yield:.2f}) ve F/K oranı makul ({pe_ratio:.2f})."
-            })
+            }
+            signals.append(sig)
             signal_names.append("Temettü Kalesi")
             
-        # Sinyal 4: Haftalık Al-Sat (Trade Fırsatı %2.5 - %5)
+        # Sinyal 4: Haftalık Al-Sat (Kısa Vade: 1-7 Gün)
         # Şartlar: SMA 5 kırılımı + Hacim onayı + RSI (50-70 arası) + Ana Trend (Fiyat > SMA50)
         sma5_cross_up = (prev_day['Close'] < prev_sma5) and (current_price > current_sma5)
         trend_ok = current_price > current_sma50
         rsi_ok = current_rsi is not None and (50 < current_rsi < 70)
         
         if sma5_cross_up and current_volume > (volume_ma60 * 0.8) and trend_ok and rsi_ok:
-            signals.append({
+            sig = {
                 "symbol": symbol,
                 "type": "al_sat_haftalik",
+                "name": "Haftalık Al-Sat",
+                "timeframe_key": "SHORT",
+                "timeframe_label": "⚡ Kısa Vade (1-7 Gün)",
+                "target_return": "%2.5 - %5",
+                "risk_level": "Orta / Yüksek",
+                "price_at_signal": round(current_price, 2),
+                "rsi": round(current_rsi, 2) if current_rsi else None,
                 "message": f"⚡ Haftalık Al-Sat: {symbol.replace('.IS', '')} fiyatı 5 günlük ortalamasını hacimli kesti (RSI: {current_rsi:.1f}, Ana Trend: Pozitif). Hedef: %2.5 - %5."
-            })
+            }
+            signals.append(sig)
             signal_names.append("Haftalık Al-Sat")
             
-        # Sinyal 5: Aylık Al-Sat (Trade Fırsatı %5 - %10)
+        # Sinyal 5: Aylık Al-Sat (Orta Vade: 1-4 Hafta)
         # Şartlar: SMA 20 kırılımı + Hacim onayı + RSI (50-70 arası) + Ana Trend (Fiyat > SMA50)
         sma20_cross_up = (prev_day['Close'] < prev_sma20) and (current_price > current_sma20)
         if sma20_cross_up and current_volume > volume_ma60 and trend_ok and rsi_ok:
-            signals.append({
+            sig = {
                 "symbol": symbol,
                 "type": "al_sat_aylik",
-                "message": f"🚀 Aylık Al-Sat: {symbol.replace('.IS', '')} fiyatı 20 günlük ortalamasını kırarak yükselişe geçti (RSI: {current_rsi:.1f}, Ana Trend: Pozitif). Hedef: %5 - %10."
-            })
+                "name": "Aylık Al-Sat",
+                "timeframe_key": "MEDIUM",
+                "timeframe_label": "📈 Orta Vade (1-4 Hafta)",
+                "target_return": "%5 - %12",
+                "risk_level": "Orta",
+                "price_at_signal": round(current_price, 2),
+                "rsi": round(current_rsi, 2) if current_rsi else None,
+                "message": f"🚀 Aylık Al-Sat: {symbol.replace('.IS', '')} fiyatı 20 günlük ortalamasını kırarak yükselişe geçti (RSI: {current_rsi:.1f}, Ana Trend: Pozitif). Hedef: %5 - %12."
+            }
+            signals.append(sig)
             signal_names.append("Aylık Al-Sat")
             
         raw_data['signals'] = ", ".join(signal_names)
+        raw_data['signal_details'] = signals
             
         return {"signals": signals, "raw_data": raw_data}
         
@@ -154,7 +202,7 @@ def analyze_stock(symbol):
 
 def run_analysis():
     print("BIST hisseleri analiz ediliyor...")
-    from database import save_stock_data
+    from database import save_stock_data, save_signals
     
     all_signals = []
     all_raw_data = []
@@ -173,6 +221,10 @@ def run_analysis():
     if all_raw_data:
         save_stock_data(all_raw_data)
         print(f"{len(all_raw_data)} hissenin verileri SQLite veritabanına kaydedildi.")
+        
+    if all_signals:
+        save_signals(all_signals)
+        print(f"{len(all_signals)} adet sinyal geçmişe kaydedildi.")
         
     return all_signals
 

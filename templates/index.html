@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIST100 - Antigravity Stock Scanner</title>
+    <title>BIST100 - Antigravity Executive Dashboard</title>
     <!-- Modern Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -13,44 +15,200 @@
         <header>
             <div class="logo">
                 <span class="logo-icon">📈</span>
-                <h1>BIST100 Sinyal Tarayıcı</h1>
+                <div>
+                    <h1>BIST100 Executive Dashboard</h1>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">Akıllı Portföy, Hedef & Sinyal Yönetim Merkezi</p>
+                </div>
             </div>
             <nav class="nav-menu">
-                <a href="/" class="nav-link active">Ana Sayfa</a>
-                <a href="/hisse-analiz" class="nav-link">Tekli Hisse Analizi</a>
-                <a href="/takip" class="nav-link">Takip Listesi</a>
+                <a href="/" class="nav-link active">📊 Dashboard</a>
+                <a href="/portfolio" class="nav-link">💼 Portföy</a>
+                <a href="/hisse-analiz" class="nav-link">🎯 Tekli Hisse</a>
+                <a href="/takip" class="nav-link">👀 Takip & 🔔 Alarmlar</a>
             </nav>
             <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Hisse Ara (Örn: THYAO)...">
+                <input type="text" id="searchInput" placeholder="Hisse veya Sinyal Ara (Örn: THYAO)...">
             </div>
         </header>
 
         <main>
-            <div class="table-container">
-                <table id="stockTable">
-                    <thead>
-                        <tr>
-                            <th data-sort="symbol">Hisse Kodu</th>
-                            <th data-sort="price">Fiyat (₺)</th>
-                            <th data-sort="rsi">RSI (14)</th>
-                            <th data-sort="pb_ratio">PD/DD</th>
-                            <th data-sort="pe_ratio">F/K</th>
-                            <th data-sort="div_yield">Temettü (%)</th>
-                            <th data-sort="signals">Sinyaller</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Veriler JavaScript ile buraya eklenecek -->
-                        <tr class="loading-row">
-                            <td colspan="7">Veriler yükleniyor...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- 1. Top KPI Summary Grid -->
+            <div class="stats-grid">
+                <!-- Portföy Değeri KPI -->
+                <div class="stat-card">
+                    <div class="stat-card-title">
+                        <span>💼 Portföy Varlığı</span>
+                        <span style="color: var(--accent);">📊</span>
+                    </div>
+                    <div class="stat-card-value" id="kpiPortfolioValue">₺0.00</div>
+                    <div class="stat-card-sub" id="kpiPortfolioPnl">Net K/Z: ₺0.00 (%0.00)</div>
+                </div>
+
+                <!-- Aylık Hedef KPI -->
+                <div class="stat-card">
+                    <div class="stat-card-title">
+                        <span>🎯 Bu Ayın Kârı & Hedef</span>
+                        <span style="color: #34d399;">🏁</span>
+                    </div>
+                    <div class="stat-card-value" id="kpiTargetProfit" style="color: #34d399;">₺0.00</div>
+                    <div class="stat-card-sub" id="kpiTargetProgress">Hedef: ₺0.00 (%0 tamamlandı)</div>
+                </div>
+
+                <!-- Taze Sinyaller KPI -->
+                <div class="stat-card">
+                    <div class="stat-card-title">
+                        <span>⚡ Günün Sinyalleri</span>
+                        <span style="color: #fbbf24;">⚡</span>
+                    </div>
+                    <div class="stat-card-value" id="kpiSignalsCount" style="color: #fbbf24;">0</div>
+                    <div class="stat-card-sub" id="kpiSignalsSub">Kısa: 0 | Orta: 0 | Uzun: 0</div>
+                </div>
+
+                <!-- Aktif Alarmlar KPI -->
+                <div class="stat-card">
+                    <div class="stat-card-title">
+                        <span>🔔 Takip & Alarmlar</span>
+                        <span style="color: #c084fc;">🔔</span>
+                    </div>
+                    <div class="stat-card-value" id="kpiAlertsCount" style="color: #c084fc;">0</div>
+                    <div class="stat-card-sub" id="kpiAlertsSub">0 aktif fiyat alarmı devrede</div>
+                </div>
+            </div>
+
+            <!-- 2. Executive Single-Pane Widgets Grid -->
+            <div class="dashboard-grid">
+                <!-- Sol Kolon: Portföy Özeti & Varlık Dağılımı -->
+                <div class="dashboard-col">
+                    <div class="widget-card">
+                        <div class="widget-header">
+                            <span class="widget-title">💼 Portföy Dağılımı & Pozisyonlar</span>
+                            <a href="/portfolio" class="widget-link">Tümünü Yönet →</a>
+                        </div>
+                        <div class="portfolio-widget-content">
+                            <div class="chart-box">
+                                <canvas id="portfolioPieChart"></canvas>
+                            </div>
+                            <div class="mini-list" id="miniPortfolioList">
+                                <div style="color: var(--text-secondary); font-size: 0.85rem; text-align:center; padding: 1rem;">
+                                    Pozisyon yükleniyor...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aylık Hedef Mini İlerleme -->
+                    <div class="widget-card">
+                        <div class="widget-header">
+                            <span class="widget-title">🎯 Aylık Kazanç Hedefi Durumu</span>
+                            <a href="/portfolio" class="widget-link">Hedefi Düzenle →</a>
+                        </div>
+                        <div class="target-mini-container">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                <span style="color: var(--text-secondary);">İlerleme: <strong id="miniTargetPct" style="color: #fff;">%0</strong></span>
+                                <span style="color: var(--text-secondary);">Kalan: <strong id="miniTargetRemaining" style="color: #38bdf8;">₺0.00</strong></span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" id="miniProgressBar" style="width: 0%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;">
+                                <span>Gerçekleşen: <b id="miniRealizedPnl" style="color: #34d399;">₺0.00</b></span>
+                                <span>Aylık Hedef: <b id="miniTargetTotal">₺0.00</b></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sağ Kolon: Günün Sinyalleri & Aktif Alarmlar -->
+                <div class="dashboard-col">
+                    <!-- Günün Öne Çıkan Sinyalleri -->
+                    <div class="widget-card">
+                        <div class="widget-header">
+                            <span class="widget-title">🔥 Günün Öne Çıkan Sinyalleri</span>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);" id="topSignalCountBadge">0 Sinyal</span>
+                        </div>
+                        <div class="mini-list" id="miniSignalsList">
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; text-align:center; padding: 1rem;">
+                                Sinyaller yükleniyor...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aktif Alarmlar Widget -->
+                    <div class="widget-card">
+                        <div class="widget-header">
+                            <span class="widget-title">🔔 Fiyat & Oran Alarmları</span>
+                            <a href="/takip" class="widget-link">Alarmları Aç →</a>
+                        </div>
+                        <div class="mini-list" id="miniAlertsList">
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; text-align:center; padding: 1rem;">
+                                Alarmlar yükleniyor...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Bottom Section: Tam Sinyal & Tarama Tablosu -->
+            <div style="margin-top: 1rem; margin-bottom: 1rem;">
+                <div class="widget-header" style="border: none; padding: 0; margin-bottom: 0.75rem;">
+                    <span class="widget-title" style="font-size: 1.2rem;">📊 Tüm BIST Hisseleri & Vade Bazlı Tarayıcı</span>
+                </div>
+
+                <!-- Controls & Timeframe Filters -->
+                <div class="controls-bar">
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-timeframe="all">
+                            <span>🌐</span> Tümü (<span id="countAll">0</span>)
+                        </button>
+                        <button class="filter-btn short-btn" data-timeframe="SHORT">
+                            <span>⚡</span> Kısa Vade (1-7 Gün)
+                        </button>
+                        <button class="filter-btn med-btn" data-timeframe="MEDIUM">
+                            <span>📈</span> Orta Vade (1-4 Hafta)
+                        </button>
+                        <button class="filter-btn long-btn" data-timeframe="LONG">
+                            <span>💎</span> Uzun Vade / Değer
+                        </button>
+                        <button class="filter-btn" data-timeframe="SIGNALS_ONLY">
+                            <span>🎯</span> Sadece Sinyalliler
+                        </button>
+                    </div>
+
+                    <div>
+                        <button class="btn-primary" id="btnRunScan">
+                            <span>⚡</span> Canlı Tarama Yap
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="stockTable">
+                        <thead>
+                            <tr>
+                                <th data-sort="symbol">Hisse Kodu</th>
+                                <th data-sort="price">Fiyat (₺)</th>
+                                <th data-sort="timeframe">Vade</th>
+                                <th data-sort="signals">Sinyal / Strateji</th>
+                                <th>Hedef Getiri</th>
+                                <th data-sort="rsi">RSI (14)</th>
+                                <th data-sort="pb_ratio">PD/DD</th>
+                                <th data-sort="pe_ratio">F/K</th>
+                                <th data-sort="div_yield">Temettü (%)</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr class="loading-row">
+                                <td colspan="10" style="text-align:center; padding: 2rem;">Veriler yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
         
         <footer>
-            <p>Veriler günlük olarak <span class="highlight">SQLite</span> veritabanına kaydedilir ve buradan okunur.</p>
+            <p>Antigravity BIST100 Executive Dashboard — Veriler günlük olarak <span class="highlight">SQLite</span> veritabanında saklanır.</p>
         </footer>
     </div>
 

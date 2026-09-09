@@ -8,7 +8,7 @@ import asyncio
 from analyzer import run_analysis
 from sentiment import analyze_sentiment
 import yfinance as yf
-from database import get_tracked_stocks, update_tracked_stock_price
+from database import get_tracked_stocks, update_tracked_stock_price, get_active_alerts, mark_alert_triggered
 
 # .env dosyasından ayarları yükle
 load_dotenv()
@@ -43,6 +43,13 @@ def job():
     print("Günlük Hisse Tarama İşlemi Başlıyor...")
     print("="*50)
     
+    # 0. Veritabanını otomatik yedekle
+    try:
+        from backup_db import create_backup
+        create_backup()
+    except Exception as be:
+        print(f"Otomatik yedekleme uyarısı: {be}")
+
     # Sinyalleri analyzer üzerinden al
     signals = run_analysis()
     
@@ -143,6 +150,71 @@ def check_tracked_stocks_job():
     else:
         print("Fiyatlarda anlamlı bir değişim olmadı (veya borsa kapalı).")
 
+def check_alerts_job():
+    """
+    Aktif kullanıcı fiyat alarmlarını kontrol eder ve tetiklenenleri Telegram'a iletir.
+    """
+    print("\n" + "="*50)
+    print("Aktif Fiyat Alarmları Kontrol Ediliyor...")
+    print("="*50)
+
+    alerts = get_active_alerts()
+    if not alerts:
+        print("Aktif fiyat alarmı bulunmuyor.")
+        return
+
+    print(f"Toplam {len(alerts)} aktif alarm denetleniyor...")
+
+    for alert in alerts:
+        alert_id = alert['id']
+        symbol = alert['symbol']
+        ref_price = alert['reference_price']
+        target_pct = alert['target_percentage']
+        target_price = alert['target_price']
+        direction = alert['direction']
+        notes = alert.get('notes', '')
+
+        try:
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period="5d")
+            if hist.empty:
+                continue
+
+            current_price = float(hist.iloc[-1]['Close'])
+            actual_pct = ((current_price - ref_price) / ref_price) * 100
+
+            triggered = False
+            if direction == 'UP' and current_price >= target_price:
+                triggered = True
+            elif direction == 'DOWN' and current_price <= target_price:
+                triggered = True
+
+            if triggered:
+                # 1. DB'de tetiklendi olarak işaretle (Spam'i önler)
+                mark_alert_triggered(alert_id, current_price)
+
+                # 2. Telegram Bildirimi Oluştur
+                emoji = "🚀 📈" if direction == 'UP' else "⚠️ 📉"
+                dir_label = "YÜKSELİŞ" if direction == 'UP' else "DÜŞÜŞ"
+                sign = "+" if actual_pct >= 0 else ""
+
+                msg = (
+                    f"<b>🚨 FİYAT ALARMI TETİKLENDİ!</b> {emoji}\n\n"
+                    f"<b>Hisse:</b> {symbol}\n"
+                    f"<b>Alarm Türü:</b> %{target_pct:+.2f} {dir_label}\n"
+                    f"<b>Referans Fiyat:</b> ₺{ref_price:,.2f}\n"
+                    f"<b>Hedef Fiyat:</b> ₺{target_price:,.2f}\n"
+                    f"<b>Güncel Fiyat:</b> ₺{current_price:,.2f} ({sign}%{actual_pct:.2f})\n"
+                )
+                if notes:
+                    msg += f"<b>Notunuz:</b> <i>{notes}</i>\n"
+
+                print(f"ALARM TETİKLENDİ: {symbol} -> ₺{current_price}")
+                asyncio.run(send_telegram_message(msg))
+
+        except Exception as e:
+            print(f"Alarm kontrol hatası ({symbol}): {e}")
+
 def main():
     print("Sistem başlatıldı. Telegram ve API ayarlarınızı .env dosyasından kontrol ediniz.")
     print("Günlük tarama her gün saat 18:30'da çalışacak şekilde ayarlandı.")
@@ -159,6 +231,9 @@ def main():
     
     # Her 30 dakikada bir takip listesini kontrol et
     schedule.every(30).minutes.do(check_tracked_stocks_job)
+
+    # Her 10 dakikada bir kullanıcı alarmlarını kontrol et
+    schedule.every(10).minutes.do(check_alerts_job)
     
     while True:
         schedule.run_pending()

@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portföy & Hedef Takibi - Antigravity Stock Scanner</title>
+    <!-- Modern Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Top Target Card */
+        .target-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(12px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .target-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .target-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .target-title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .target-title-group h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+        }
+
+        .target-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .target-stat {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .target-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.35rem;
+        }
+
+        .target-stat-val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Progress Bar Container */
+        .progress-wrapper {
+            margin-top: 0.5rem;
+        }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            height: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8 0%, #10b981 100%);
+            border-radius: 999px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .progress-bar-fill.negative {
+            background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);
+        }
+
+        /* Portfolio Summary Grid */
+        .portfolio-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .summary-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .summary-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .summary-subtext {
+            font-size: 0.85rem;
+            margin-top: 0.4rem;
+            font-weight: 600;
+        }
+
+        .text-success {
+            color: #10b981 !important;
+        }
+
+        .text-danger {
+            color: #ef4444 !important;
+        }
+
+        .text-neutral {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Tabs Navigation */
+        .tabs-header {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.85rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #0b1120;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.6rem 1.1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-sell {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .btn-sell:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #10b981;
+            color: #fff;
+        }
+
+        .btn-fetch-price {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .btn-fetch-price:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-fetch-price:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .price-status {
+            font-size: 0.8rem;
+            margin-top: 0.35rem;
+            display: block;
+        }
+
+        .pnl-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .pnl-badge.positive {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .pnl-badge.negative {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .pnl-badge.neutral {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .action-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.4rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .action-btn.delete:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: #161926;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 480px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group select option {
+            background: #161926;
+            color: #fff;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        #alertBox {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .empty-portfolio {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-portfolio span {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        .info-box {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">💼</span>
+                <h1>Portföy & Hedef Takibi</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-link">Ana Sayfa</a>
+                <a href="/portfolio" class="nav-link active">💼 Portföy & Hedef</a>
+                <a href="/hisse-analiz" class="nav-link">Tekli Hisse Analizi</a>
+                <a href="/takip" class="nav-link">Takip Listesi</a>
+            </nav>
+        </header>
+
+        <main>
+            <div id="alertBox"></div>
+
+            <!-- 🎯 Aylık Hedef & İlerleme Kartı -->
+            <div class="target-card">
+                <div class="target-header">
+                    <div class="target-title-group">
+                        <span style="font-size: 1.6rem;">🎯</span>
+                        <div>
+                            <h2>Aylık Gelir / Kâr Hedefi</h2>
+                            <span id="targetMonthText" style="font-size: 0.85rem; color: var(--accent); font-weight: 600;">Bu Ay</span>
+                        </div>
+                    </div>
+                    <button class="btn-outline" id="openTargetModalBtn">
+                        ✏️ Hedefi Değiştir
+                    </button>
+                </div>
+
+                <div class="target-grid">
+                    <div class="target-stat">
+                        <div class="target-stat-label">Aylık Kazanç Hedefi</div>
+                        <div class="target-stat-val" id="targetAmountDisplay">₺0.00</div>
+                    </div>
+                    <div class="target-stat">
+                        <div class="target-stat-label">Gerçekleşen Net Kâr</div>
+                        <div class="target-stat-val" id="realizedPnlDisplay">₺0.00</div>
+                    </div>
+                    <div class="target-stat">
+                        <div class="target-stat-label">Hedefe Kalan Tutar</div>
+                        <div class="target-stat-val" id="remainingTargetDisplay">₺0.00</div>
+                    </div>
+                    <div class="target-stat">
+                        <div class="target-stat-label">Başarılı Satışlar</div>
+                        <div class="target-stat-val" id="totalTradesDisplay">0 İşlem</div>
+                    </div>
+                </div>
+
+                <div class="progress-wrapper">
+                    <div class="progress-labels">
+                        <span>Hedef İlerlemesi: <strong id="progressPctText" style="color: var(--accent);">%0.00</strong></span>
+                        <span id="targetStatusText">İlerlemeye devam et!</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="targetProgressBar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards (Portföy Anlık Durumu) -->
+            <div class="portfolio-summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">
+                        <span>Toplam Portföy Değeri</span>
+                        <span>💰</span>
+                    </div>
+                    <div class="summary-value" id="summaryTotalValue">₺0.00</div>
+                    <div class="summary-subtext text-neutral" id="summaryPositionCount">0 Hisse Senedi</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-label">
+                        <span>Toplam Alış Maliyeti</span>
+                        <span>💳</span>
+                    </div>
+                    <div class="summary-value" id="summaryTotalCost">₺0.00</div>
+                    <div class="summary-subtext text-neutral" id="summaryTotalLots">0 Toplam Lot</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-label">
+                        <span>Gerçekleşmemiş K/Z (Açık Pozisyonlar)</span>
+                        <span id="pnlIcon">📊</span>
+                    </div>
+                    <div class="summary-value" id="summaryTotalPnl">₺0.00</div>
+                    <div class="summary-subtext" id="summaryTotalPnlPct">%0.00</div>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="activeTab">
+                    📊 Aktif Pozisyonlar (<span id="activePositionsTabCount">0</span>)
+                </button>
+                <button class="tab-btn" data-tab="historyTab">
+                    📜 Gerçekleşen Satış Geçmişi (<span id="historyTabCount">0</span>)
+                </button>
+            </div>
+
+            <!-- Tab 1: Aktif Pozisyonlar -->
+            <div id="activeTab" class="tab-content active">
+                <div class="action-bar">
+                    <button class="btn-primary" id="openAddModalBtn">
+                        <span>➕</span> Yeni Hisse / Lot Ekle
+                    </button>
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <button class="btn-outline" id="refreshBtn" title="Canlı fiyatları güncelle">
+                            🔄 Fiyatları Güncelle
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="portfolioTable">
+                        <thead>
+                            <tr>
+                                <th>Hisse Kodu</th>
+                                <th>Lot Adedi</th>
+                                <th>Alış Fiyatı</th>
+                                <th>Güncel Fiyat</th>
+                                <th>Toplam Maliyet</th>
+                                <th>Güncel Değer</th>
+                                <th>Kâr / Zarar (TL)</th>
+                                <th>K/Z (%)</th>
+                                <th>Alış Tarihi</th>
+                                <th style="text-align: center;">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portfolioTableBody">
+                            <tr class="loading-row">
+                                <td colspan="10" style="text-align: center;">Portföy verileri yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Satış Geçmişi & Gerçekleşen Kâr/Zarar -->
+            <div id="historyTab" class="tab-content">
+                <div class="action-bar">
+                    <div style="color: var(--text-secondary); font-size: 0.95rem;">
+                        Tamamlanan ve kâr/zararı realize edilen satış işlemleriniz:
+                    </div>
+                    <button class="btn-outline" id="refreshHistoryBtn">
+                        🔄 Geçmişi Yenile
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="transactionsTable">
+                        <thead>
+                            <tr>
+                                <th>Satış Tarihi</th>
+                                <th>Hisse Kodu</th>
+                                <th>Satılan Lot</th>
+                                <th>Alış Maliyeti</th>
+                                <th>Satış Fiyatı</th>
+                                <th>Toplam Satış Tutarı</th>
+                                <th>Gerçekleşen K/Z (TL)</th>
+                                <th>Net Getiri (%)</th>
+                                <th>Not</th>
+                                <th style="text-align: center;">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody">
+                            <tr class="loading-row">
+                                <td colspan="10" style="text-align: center;">Satış geçmişi yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- ➕ Pozisyon Ekle Modalı -->
+        <div id="addModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>➕ Yeni Pozisyon Ekle</h3>
+                    <button class="modal-close" id="closeAddModalBtn">&times;</button>
+                </div>
+                <form id="addPositionForm">
+                    <div class="form-group">
+                        <label for="addMarket">Piyasa Türü</label>
+                        <select id="addMarket">
+                            <option value=".IS">🇹🇷 BIST (Türk Hisseleri - .IS)</option>
+                            <option value="">🇺🇸 ABD Hisseleri (AAPL, NVDA...)</option>
+                            <option value="-USD">🪙 Kripto Paralar (BTC-USD...)</option>
+                            <option value="CUSTOM">🔧 Özel / Diğer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="addSymbol">Hisse Kodu (Örn: THYAO, EREGL, ASELS)</label>
+                        <input type="text" id="addSymbol" placeholder="Örn: THYAO" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label for="addLot">Lot (Adet)</label>
+                        <input type="number" id="addLot" placeholder="Örn: 100" min="1" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="addBuyPrice" style="margin-bottom: 0;">Birim Alış Fiyatı (₺)</label>
+                            <button type="button" id="fetchAddPriceBtn" class="btn-fetch-price" title="Girilen hissenin anlık piyasa fiyatını otomatik getir">
+                                ⚡ Güncel Fiyattan Al
+                            </button>
+                        </div>
+                        <input type="number" id="addBuyPrice" placeholder="Örn: 285.50" min="0.01" step="0.01" required>
+                        <span id="addPriceStatus" class="price-status" style="display: none;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="addNotes">Not / Açıklama (Opsiyonel)</label>
+                        <input type="text" id="addNotes" placeholder="Örn: Uzun vadeli alım">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" id="cancelAddBtn">İptal</button>
+                        <button type="submit" class="btn-primary" id="saveAddBtn">Portföye Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 💵 Satış Yap Modalı -->
+        <div id="sellModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>💵 Hisse Satışı Yap</h3>
+                    <button class="modal-close" id="closeSellModalBtn">&times;</button>
+                </div>
+                <form id="sellPositionForm">
+                    <input type="hidden" id="sellPositionId">
+                    <input type="hidden" id="sellBuyPrice">
+                    <input type="hidden" id="sellMaxLot">
+
+                    <div class="info-box" id="sellInfoBox">
+                        <!-- Bilgiler dinamik doldurulacak -->
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sellLot">Satılacak Lot Adedi</label>
+                        <input type="number" id="sellLot" min="1" step="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="sellPrice" style="margin-bottom: 0;">Birim Satış Fiyatı (₺)</label>
+                            <button type="button" id="fetchSellPriceBtn" class="btn-fetch-price" title="Anlık piyasa fiyatını getir">
+                                ⚡ Güncel Fiyattan Sat
+                            </button>
+                        </div>
+                        <input type="number" id="sellPrice" min="0.01" step="0.01" required>
+                        <span id="sellPriceStatus" class="price-status" style="display: none;"></span>
+                    </div>
+
+                    <!-- Canlı Kâr/Zarar Önizleme -->
+                    <div class="info-box" id="sellPreviewBox" style="display: none; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25);">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Tahmini Gerçekleşen Net K/Z:</div>
+                        <div id="sellPreviewPnl" style="font-size: 1.2rem; font-weight: 700; color: #10b981;">₺0.00</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sellNotes">Satış Notu (Opsiyonel)</label>
+                        <input type="text" id="sellNotes" placeholder="Örn: Hedefe ulaşıldı">
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" id="cancelSellBtn">İptal</button>
+                        <button type="submit" class="btn-primary" id="confirmSellBtn" style="background: #10b981;">Satışı Onayla</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ✏️ Pozisyon Düzenle Modalı -->
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>✏️ Pozisyon Düzenle</h3>
+                    <button class="modal-close" id="closeEditModalBtn">&times;</button>
+                </div>
+                <form id="editPositionForm">
+                    <input type="hidden" id="editPositionId">
+                    <div class="form-group">
+                        <label>Hisse Kodu</label>
+                        <input type="text" id="editSymbol" disabled style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editLot">Lot (Adet)</label>
+                        <input type="number" id="editLot" min="1" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="editBuyPrice" style="margin-bottom: 0;">Birim Alış Fiyatı (₺)</label>
+                            <button type="button" id="fetchEditPriceBtn" class="btn-fetch-price" title="Hissenin anlık piyasa fiyatını getir">
+                                ⚡ Güncel Fiyattan Al
+                            </button>
+                        </div>
+                        <input type="number" id="editBuyPrice" min="0.01" step="0.01" required>
+                        <span id="editPriceStatus" class="price-status" style="display: none;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="editNotes">Not / Açıklama</label>
+                        <input type="text" id="editNotes">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" id="cancelEditBtn">İptal</button>
+                        <button type="submit" class="btn-primary" id="saveEditBtn">Güncelle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 🎯 Aylık Hedef Ayarlama Modalı -->
+        <div id="targetModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🎯 Aylık Kazanç Hedefi Belirle</h3>
+                    <button class="modal-close" id="closeTargetModalBtn">&times;</button>
+                </div>
+                <form id="targetForm">
+                    <div class="form-group">
+                        <label for="targetInput">Aylık Net Kâr Hedefiniz (₺)</label>
+                        <input type="number" id="targetInput" placeholder="Örn: 25000" min="0" step="500" required>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        Bu ay içinde gerçekleştirdiğiniz hisse satışlarından elde edilen net kâr bu hedefe oranlanacaktır.
+                    </p>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" id="cancelTargetBtn">İptal</button>
+                        <button type="submit" class="btn-primary" id="saveTargetBtn">Hedefi Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <footer>
+            <p>Portföy ve gerçekleşen işlem verileri <span class="highlight">SQLite</span> üzerinde kalıcı saklanır.</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/portfolio.js"></script>
+</body>
+</html>
