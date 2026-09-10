@@ -92,200 +92,10 @@ STRATEGY_DEFS = {
     }
 }
 
-# Önceden hesaplanmış dürüst baseline istatistikleri
-DEFAULT_BASELINE_STATS = [
-    {
-        "signal_type": "al_sat_haftalik",
-        "signal_name": "Haftalık Al-Sat",
-        "timeframe_key": "SHORT",
-        "horizon_days": 7,
-        "sample_size": 188,
-        "win_rate": 61.7,
-        "avg_return": 1.88,
-        "median_return": 1.65,
-        "max_loss": -14.6,
-        "std_dev": 4.8,
-        "benchmark_return": 1.19,
-        "excess_return": 0.69,
-        "train_win_rate": 62.5,
-        "test_win_rate": 59.2,
-        "train_avg_return": 2.10,
-        "test_avg_return": 1.45,
-        "p_value": 0.018,
-        "is_significant": 1,
-        "alpha_label": "Pozitif Alfa",
-        "is_validated": 1,
-        "notes": "✓ ONAYLANDI: Pozitif alfa (%+0.69), %61.7 kazanma, p=0.018 (İstatistiksel Anlamlı)."
-    },
-    {
-        "signal_type": "al_sat_aylik",
-        "signal_name": "Aylık Al-Sat",
-        "timeframe_key": "MEDIUM",
-        "horizon_days": 20,
-        "sample_size": 72,
-        "win_rate": 62.5,
-        "avg_return": 4.01,
-        "median_return": 3.80,
-        "max_loss": -16.2,
-        "std_dev": 7.4,
-        "benchmark_return": 1.38,
-        "excess_return": 2.63,
-        "train_win_rate": 64.0,
-        "test_win_rate": 58.3,
-        "train_avg_return": 4.40,
-        "test_avg_return": 3.10,
-        "p_value": 0.006,
-        "is_significant": 1,
-        "alpha_label": "Pozitif Alfa",
-        "is_validated": 1,
-        "notes": "✓ ONAYLANDI: Güçlü alfa (%+2.63), %62.5 kazanma, p=0.006 (İstatistiksel Anlamlı)."
-    },
-    {
-        "signal_type": "hacim_onayi",
-        "signal_name": "Hacim Patlaması",
-        "timeframe_key": "SHORT",
-        "horizon_days": 7,
-        "sample_size": 948,
-        "win_rate": 55.7,
-        "avg_return": 1.12,
-        "median_return": 0.95,
-        "max_loss": -15.5,
-        "std_dev": 5.1,
-        "benchmark_return": 0.53,
-        "excess_return": 0.59,
-        "train_win_rate": 56.4,
-        "test_win_rate": 53.6,
-        "train_avg_return": 1.25,
-        "test_avg_return": 0.85,
-        "p_value": 0.001,
-        "is_significant": 1,
-        "alpha_label": "Pozitif Alfa",
-        "is_validated": 1,
-        "notes": "✓ ONAYLANDI: Cooldown düzeltmesi sonrası bağımsız N=948, pozitif alfa (%+0.59), p=0.001."
-    },
-    {
-        "signal_type": "deger_avcisi",
-        "signal_name": "Değer Avcısı",
-        "timeframe_key": "LONG",
-        "horizon_days": 60,
-        "sample_size": 28,
-        "win_rate": 46.4,
-        "avg_return": 1.79,
-        "median_return": 1.20,
-        "max_loss": -22.4,
-        "std_dev": 13.5,
-        "benchmark_return": 2.31,
-        "excess_return": -0.52,
-        "train_win_rate": 47.6,
-        "test_win_rate": 42.8,
-        "train_avg_return": 2.10,
-        "test_avg_return": 0.90,
-        "p_value": 0.485,
-        "is_significant": 0,
-        "alpha_label": "Alfa Yok / Piyasadan Farksız",
-        "is_validated": 0,
-        "notes": "⚠️ ALFA ÜRETMİYOR: BIST100 farkı %-0.52 (Piyasadan farksız). p=0.485 (Anlamlı Değil). Doğrulanmadı."
-    },
-    {
-        "signal_type": "temettu_kalesi",
-        "signal_name": "Temettü Kalesi",
-        "timeframe_key": "LONG",
-        "horizon_days": 60,
-        "sample_size": 221,
-        "win_rate": 56.1,
-        "avg_return": 3.74,
-        "median_return": 3.10,
-        "max_loss": -19.5,
-        "std_dev": 10.2,
-        "benchmark_return": 7.09,
-        "excess_return": -3.35,
-        "train_win_rate": 57.0,
-        "test_win_rate": 53.5,
-        "train_avg_return": 4.10,
-        "test_avg_return": 2.80,
-        "p_value": 0.082,
-        "is_significant": 0,
-        "alpha_label": "Alfa Yok / Endeks Altı",
-        "is_validated": 0,
-        "notes": "⚠️ ENDEKS ALTI: BIST100'e göre %-3.35 geride kaldı (Defansif hisseler). Doğrulanmadı."
-    },
-    {
-        "signal_type": "asiri_alim_risk",
-        "signal_name": "Aşırı Alım / Risk",
-        "timeframe_key": "SHORT",
-        "horizon_days": 7,
-        "sample_size": 423,
-        "win_rate": 41.1, # Düşüş gerçekleşme oranı düşük (%41.1)
-        "avg_return": 2.74, # Hisseler düşmek yerine %2.74 yükseldi
-        "median_return": 2.10,
-        "max_loss": 18.4,
-        "std_dev": 6.1,
-        "benchmark_return": 1.19,
-        "excess_return": 1.55,
-        "train_win_rate": 42.0,
-        "test_win_rate": 38.5,
-        "train_avg_return": 2.90,
-        "test_avg_return": 2.25,
-        "p_value": 0.001,
-        "is_significant": 0,
-        "alpha_label": "Yön Ters",
-        "is_validated": 0,
-        "notes": "⚠️ YÖN TERS: Sinyal sonrası hisseler düşmek yerine ortalama %+2.74 yükseldi. Doğrulanmadı."
-    },
-    {
-        "signal_type": "trend_kirilimi",
-        "signal_name": "Trend Kırılımı",
-        "timeframe_key": "MEDIUM",
-        "horizon_days": 20,
-        "sample_size": 42,
-        "win_rate": 50.0,
-        "avg_return": -0.36,
-        "median_return": -0.15,
-        "max_loss": 14.5,
-        "std_dev": 6.8,
-        "benchmark_return": 1.20,
-        "excess_return": -1.56,
-        "train_win_rate": 51.5,
-        "test_win_rate": 45.4,
-        "train_avg_return": -0.50,
-        "test_avg_return": 0.10,
-        "p_value": 0.312,
-        "is_significant": 0,
-        "alpha_label": "Yetersiz Düşüş",
-        "is_validated": 0,
-        "notes": "⚠️ YETERSİZ DÜŞÜŞ: Düşüş oranı %50, p=0.312 (Anlamsız). Doğrulanmadı."
-    },
-    {
-        "signal_type": "pahali_hisse",
-        "signal_name": "Aşırı Değerleme Riski",
-        "timeframe_key": "LONG",
-        "horizon_days": 60,
-        "sample_size": 522,
-        "win_rate": 31.6, # Düşüş oranı sadece %31.6
-        "avg_return": 15.39, # Sinyal sonrası hisseler %15.39 yükseldi (Ters Yön!)
-        "median_return": 13.80,
-        "max_loss": 45.0,
-        "std_dev": 18.2,
-        "benchmark_return": 7.09,
-        "excess_return": 8.30,
-        "train_win_rate": 32.0,
-        "test_win_rate": 30.5,
-        "train_avg_return": 16.10,
-        "test_avg_return": 13.20,
-        "p_value": 0.001,
-        "is_significant": 0,
-        "alpha_label": "Yön Ters",
-        "is_validated": 0,
-        "notes": "⚠️ YÖN TERS: Aşırı değerleme sinyali sonrası hisseler düşmek yerine ortalama %+15.39 yükseldi. Doğrulanmadı."
-    }
-]
-
-def seed_baseline_stats_if_empty():
-    """Veritabanında henüz backtest sonucu yoksa varsayılan istatistikleri yükler."""
-    existing = get_backtest_results()
-    if not existing:
-        save_backtest_results(DEFAULT_BASELINE_STATS)
-        print("Varsayilan dogrulanmis backtest istatistikleri yuklendi.")
+# ==================== İŞLEM MALİYETİ PARAMETRELERİ ====================
+# BIST 100 hisseleri için tipik aracı kurum komisyonu + BSMV (%0.15 alış + %0.15 satış = %0.30 round-trip)
+TRANSACTION_COST_PCT = 0.15
+ROUND_TRIP_COST_PCT = 2 * TRANSACTION_COST_PCT  # %0.30
 
 def fetch_historical_dataset(symbols, period="5y"):
     """
@@ -550,7 +360,10 @@ def run_full_backtest(symbols=None, period="5y"):
             if exit_idx < len(close_series):
                 entry_p = trig['entry_price']
                 exit_p = close_series.iloc[exit_idx]
-                ret_pct = ((exit_p - entry_p) / entry_p) * 100
+                
+                # Brüt ve Net (İşlem maliyeti düşülmüş) Getiri
+                gross_ret = ((exit_p - entry_p) / entry_p) * 100
+                net_ret = gross_ret - ROUND_TRIP_COST_PCT  # Alış %0.15 + Satış %0.15 = %0.30 maliyet
 
                 # Benchmark getirisi
                 entry_date_str = dates[entry_idx].strftime('%Y-%m-%d') if hasattr(dates[entry_idx], 'strftime') else str(dates[entry_idx])[:10]
@@ -568,17 +381,19 @@ def run_full_backtest(symbols=None, period="5y"):
                     "date": trig['date'],
                     "entry_price": entry_p,
                     "exit_price": exit_p,
-                    "return_pct": ret_pct,
+                    "gross_return_pct": gross_ret,
+                    "return_pct": net_ret,  # Net getiri ana alan
                     "bm_return_pct": bm_ret,
-                    "excess_pct": ret_pct - bm_ret
+                    "gross_excess_pct": gross_ret - bm_ret,
+                    "excess_pct": net_ret - bm_ret  # Net alfa ana alan
                 }
                 all_trades[stype].append(trade_record)
 
     # İstatistikleri hesapla & Out-of-Sample Doğrulama
     results_list = []
-    print("\n" + "="*95)
-    print(f"{'STRATEJİ':^22} | {'YÖN':^4} | {'N':^5} | {'KAZANMA %':^9} | {'ORT GETİRİ':^10} | {'XU100 ALFA':^10} | {'p-VAL':^6} | {'DURUM':^14}")
-    print("="*95)
+    print("\n" + "="*116)
+    print(f"{'STRATEJİ':^20} | {'YÖN':^4} | {'N':^5} | {'NET KAZ.%':^9} | {'BRÜT GET.':^9} | {'NET GET.':^9} | {'BRÜT ALFA':^9} | {'NET ALFA':^9} | {'p-VAL':^6} | {'DURUM':^14}")
+    print("="*116)
 
     for stype, sdef in STRATEGY_DEFS.items():
         trades = all_trades.get(stype, [])
@@ -588,9 +403,33 @@ def run_full_backtest(symbols=None, period="5y"):
         tf_key = sdef['timeframe_key']
 
         if len(trades) < 5:
-            baseline_match = next((b for b in DEFAULT_BASELINE_STATS if b['signal_type'] == stype), None)
-            if baseline_match:
-                results_list.append(baseline_match)
+            # Yetersiz veri durumunda boş/doğrulanmamış kayıt
+            results_list.append({
+                "signal_type": stype,
+                "signal_name": name,
+                "timeframe_key": tf_key,
+                "horizon_days": horizon,
+                "sample_size": len(trades),
+                "win_rate": 0.0,
+                "avg_return": 0.0,
+                "median_return": 0.0,
+                "max_loss": 0.0,
+                "std_dev": 0.0,
+                "benchmark_return": 0.0,
+                "excess_return": 0.0,
+                "gross_avg_return": 0.0,
+                "gross_excess_return": 0.0,
+                "transaction_cost_pct": TRANSACTION_COST_PCT,
+                "train_win_rate": 0.0,
+                "test_win_rate": 0.0,
+                "train_avg_return": 0.0,
+                "test_avg_return": 0.0,
+                "p_value": 1.0,
+                "is_significant": 0,
+                "alpha_label": "Yetersiz Örneklem",
+                "is_validated": 0,
+                "notes": f"⚠️ Yetersiz örneklem (N={len(trades)} < 5). Doğrulanmadı."
+            })
             continue
 
         # Tarihe göre sırala
@@ -601,51 +440,60 @@ def run_full_backtest(symbols=None, period="5y"):
         train_trades = trades[:split_idx]
         test_trades = trades[split_idx:]
 
-        all_rets = [t['return_pct'] for t in trades]
+        all_gross_rets = [t['gross_return_pct'] for t in trades]
+        all_net_rets = [t['return_pct'] for t in trades]
         bm_rets = [t['bm_return_pct'] for t in trades]
-        excess_rets = [t['excess_pct'] for t in trades]
+        gross_excess_rets = [t['gross_excess_pct'] for t in trades]
+        net_excess_rets = [t['excess_pct'] for t in trades]
         
-        train_rets = [t['return_pct'] for t in train_trades] if train_trades else all_rets
-        test_rets = [t['return_pct'] for t in test_trades] if test_trades else all_rets
+        train_net_rets = [t['return_pct'] for t in train_trades] if train_trades else all_net_rets
+        test_net_rets = [t['return_pct'] for t in test_trades] if test_trades else all_net_rets
+        train_gross_rets = [t['gross_return_pct'] for t in train_trades] if train_trades else all_gross_rets
+        test_gross_rets = [t['gross_return_pct'] for t in test_trades] if test_trades else all_gross_rets
 
         sample_size = len(trades)
         
+        # Kazanma oranı: Net getiri üzerinden (İşlem maliyeti düşüldükten sonra kârda mı?)
         if action == "BUY":
-            win_count = len([r for r in all_rets if r > 0])
-            train_win_count = len([r for r in train_rets if r > 0])
-            test_win_count = len([r for r in test_rets if r > 0])
-        else: # SELL / AVOID sinyalleri için düşüş gerçekleşmesi (return < 0) başarıdır
-            win_count = len([r for r in all_rets if r < 0])
-            train_win_count = len([r for r in train_rets if r < 0])
-            test_win_count = len([r for r in test_rets if r < 0])
+            win_count = len([r for r in all_net_rets if r > 0])
+            train_win_count = len([r for r in train_net_rets if r > 0])
+            test_win_count = len([r for r in test_net_rets if r > 0])
+        else: # SELL / AVOID sinyalleri için net düşüş gerçekleşmesi (return < 0) başarıdır
+            win_count = len([r for r in all_net_rets if r < 0])
+            train_win_count = len([r for r in train_net_rets if r < 0])
+            test_win_count = len([r for r in test_net_rets if r < 0])
 
         win_rate = (win_count / sample_size) * 100 if sample_size > 0 else 0.0
         train_win_rate = (train_win_count / len(train_trades)) * 100 if train_trades else win_rate
         test_win_rate = (test_win_count / len(test_trades)) * 100 if test_trades else win_rate
 
-        avg_return = float(np.mean(all_rets))
-        median_return = float(np.median(all_rets))
-        max_loss = float(np.min(all_rets))
-        std_dev = float(np.std(all_rets))
+        # Getiriler (Net ve Brüt)
+        avg_return = float(np.mean(all_net_rets))
+        gross_avg_return = float(np.mean(all_gross_rets))
+        median_return = float(np.median(all_net_rets))
+        max_loss = float(np.min(all_net_rets))
+        std_dev = float(np.std(all_net_rets))
         benchmark_return = float(np.mean(bm_rets)) if bm_rets else 0.0
-        excess_return = avg_return - benchmark_return
+        
+        excess_return = avg_return - benchmark_return  # Net Alfa
+        gross_excess_return = gross_avg_return - benchmark_return  # Brüt Alfa
 
-        train_avg_ret = float(np.mean(train_rets)) if train_trades else avg_return
-        test_avg_ret = float(np.mean(test_rets)) if test_trades else avg_return
+        train_avg_ret = float(np.mean(train_net_rets)) if train_trades else avg_return
+        test_avg_ret = float(np.mean(test_net_rets)) if test_trades else avg_return
 
-        # İstatistiksel Anlamlılık Testi (1-sample t-test)
+        # İstatistiksel Anlamlılık Testi (1-sample t-test NET getiri / alfa üzerinden)
         p_val = 1.0
         is_significant = 0
         try:
             if action == "BUY":
-                # Alım sinyalinde excess_return'ün 0'dan büyük olup olmadığını test et
-                t_stat, p_val = stats.ttest_1samp(excess_rets, 0)
+                # Alım sinyalinde NET excess_return'ün 0'dan büyük olup olmadığını test et
+                t_stat, p_val = stats.ttest_1samp(net_excess_rets, 0)
                 p_val = float(p_val)
                 if t_stat > 0 and p_val < 0.05:
                     is_significant = 1
             else:
                 # Satış sinyalinde getirisinin 0'dan küçük (düşüş) olup olmadığını test et
-                t_stat, p_val = stats.ttest_1samp(all_rets, 0)
+                t_stat, p_val = stats.ttest_1samp(all_net_rets, 0)
                 p_val = float(p_val)
                 if t_stat < 0 and p_val < 0.05:
                     is_significant = 1
@@ -653,14 +501,9 @@ def run_full_backtest(symbols=None, period="5y"):
             p_val = 1.0
             is_significant = 0
 
-        # Doğrulama Kriterleri (Round 2 Revize):
+        # Doğrulama Kriterleri (Round 3 - Net Getiri ve Maliyet Sonrası):
         if action == "BUY":
-            # BUY Kriteri:
-            # 1. Pozitif Alfa: excess_return > 0
-            # 2. Kazanma oranı > %50
-            # 3. Test setinde tutarlı: test_win_rate >= %48 ve test_avg_ret > 0
-            # 4. Örneklem sayısı N >= 15
-            # 5. İstatistiksel olarak anlamlı (p < 0.05)
+            # BUY Kriteri (Maliyet Sonrası Net Alfa):
             is_validated = 1 if (
                 sample_size >= 15 and 
                 win_rate > 50.0 and 
@@ -671,22 +514,21 @@ def run_full_backtest(symbols=None, period="5y"):
             ) else 0
 
             if is_validated:
-                notes = f"✓ ONAYLANDI: Pozitif alfa (%{excess_return:+.2f}), %{win_rate:.1f} kazanma, p={p_val:.3f} (Anlamlı)."
+                notes = f"✓ ONAYLANDI: Net alfa (%{excess_return:+.2f}), %{win_rate:.1f} kazanma, p={p_val:.3f} (Anlamlı)."
                 alpha_label = "Pozitif Alfa"
             elif excess_return <= 0:
-                notes = f"⚠️ ALFA ÜRETMİYOR: BIST100 farkı %{excess_return:+.2f} (Piyasadan farksız). p={p_val:.3f}. Doğrulanmadı."
-                alpha_label = "Alfa Yok / Piyasadan Farksız"
+                if gross_excess_return > 0:
+                    notes = f"⚠️ MALİYET SONRASI ALFA ERİDİ: Brüt Alfa %+0.{gross_excess_return*100:.0f} iken Net Alfa %{excess_return:+.2f} (p={p_val:.3f}). Doğrulanmadı."
+                    alpha_label = "Maliyet Sonrası Negatif Alfa"
+                else:
+                    notes = f"⚠️ ALFA ÜRETMİYOR: Net fark %{excess_return:+.2f} (Piyasadan farksız). p={p_val:.3f}. Doğrulanmadı."
+                    alpha_label = "Alfa Yok / Piyasadan Farksız"
             else:
-                notes = f"⚠️ İSTATİSTİKSEL OLARAK GÜVENSİZ: Kazanma: %{win_rate:.1f}, Alfa: %{excess_return:+.2f}, p={p_val:.3f}. Doğrulanmadı."
+                notes = f"⚠️ İSTATİSTİKSEL OLARAK GÜVENSİZ: Net Kazanma: %{win_rate:.1f}, Net Alfa: %{excess_return:+.2f}, p={p_val:.3f}. Doğrulanmadı."
                 alpha_label = "Güvensiz Alfa"
 
         else: # action == "SELL"
             # SELL / AVOID Kriteri:
-            # 1. Yön doğru olmalı: Düşüş gerçekleşme oranı (win_rate) >= %55
-            # 2. Ortalama getiri negatif olmalı: avg_return < 0
-            # 3. Benchmark'ın altında kalmalı: excess_return < 0
-            # 4. Test setinde düşüş devam etmeli: test_avg_ret < 0
-            # 5. İstatistiksel anlamlı olmalı (p < 0.05)
             is_validated = 1 if (
                 sample_size >= 15 and 
                 win_rate >= 55.0 and 
@@ -697,10 +539,10 @@ def run_full_backtest(symbols=None, period="5y"):
             ) else 0
 
             if is_validated:
-                notes = f"✓ ONAYLANDI: Düşüş oranı %{win_rate:.1f}, Ort getiri %{avg_return:.2f}, p={p_val:.3f}."
+                notes = f"✓ ONAYLANDI: Düşüş oranı %{win_rate:.1f}, Net Ort getiri %{avg_return:.2f}, p={p_val:.3f}."
                 alpha_label = "Başarılı Düşüş Sinyali"
             elif avg_return >= 0:
-                notes = f"⚠️ YÖN TERS: Sinyal sonrası hisseler düşmek yerine ortalama %{avg_return:+.2f} yükseldi. Doğrulanmadı."
+                notes = f"⚠️ YÖN TERS: Sinyal sonrası hisseler düşmek yerine net ortalama %{avg_return:+.2f} yükseldi. Doğrulanmadı."
                 alpha_label = "Yön Ters"
             else:
                 notes = f"⚠️ YETERSİZ DÜŞÜŞ: Düşüş oranı %{win_rate:.1f} < %55, p={p_val:.3f}. Doğrulanmadı."
@@ -719,6 +561,9 @@ def run_full_backtest(symbols=None, period="5y"):
             "std_dev": round(std_dev, 2),
             "benchmark_return": round(benchmark_return, 2),
             "excess_return": round(excess_return, 2),
+            "gross_avg_return": round(gross_avg_return, 2),
+            "gross_excess_return": round(gross_excess_return, 2),
+            "transaction_cost_pct": TRANSACTION_COST_PCT,
             "train_win_rate": round(train_win_rate, 2),
             "test_win_rate": round(test_win_rate, 2),
             "train_avg_return": round(train_avg_ret, 2),
@@ -732,18 +577,20 @@ def run_full_backtest(symbols=None, period="5y"):
         results_list.append(res)
 
         status_str = "✓ ONAYLANDI" if is_validated else "✗ DOĞRULANMADI"
-        print(f"{name:^22} | {action:^4} | {sample_size:5d} | %{win_rate:7.1f} | %{avg_return:+8.2f} | %{excess_return:+8.2f} | {p_val:6.3f} | {status_str:^14}")
+        print(f"{name:^20} | {action:^4} | {sample_size:5d} | %{win_rate:7.1f} | %{gross_avg_return:+7.2f} | %{avg_return:+7.2f} | %{gross_excess_return:+7.2f} | %{excess_return:+7.2f} | {p_val:6.3f} | {status_str:^14}")
 
     # Veritabanına kaydet
     save_backtest_results(results_list)
-    print("="*95)
-    print(f"Toplam {len(results_list)} strateji backtest sonucu 'backtest_results' tablosuna kaydedildi.\n")
+    print("="*116)
+    print(f"Toplam {len(results_list)} strateji backtest sonucu (Maliyet: %{ROUND_TRIP_COST_PCT:.2f} gidiş-dönüş) 'backtest_results' tablosuna kaydedildi.\n")
 
     # Denetim / Audit günlüğü kaydet
     audit_record = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "symbols_count": len(symbols),
         "period": period,
+        "transaction_cost_pct": TRANSACTION_COST_PCT,
+        "round_trip_cost_pct": ROUND_TRIP_COST_PCT,
         "results": results_list
     }
     try:
@@ -754,7 +601,7 @@ def run_full_backtest(symbols=None, period="5y"):
                 existing_logs = json.load(f)
         existing_logs.append(audit_record)
         with open(audit_file, "w", encoding="utf-8") as f:
-            json.dump(existing_logs[-10:], f, ensure_ascii=False, indent=2) # Son 10 çalıştırmayı sakla
+            json.dump(existing_logs[-10:], f, ensure_ascii=False, indent=2)
     except Exception as ae:
         print(f"Audit log kaydetme uyarısı: {ae}")
 
@@ -762,16 +609,12 @@ def run_full_backtest(symbols=None, period="5y"):
 
 def get_signal_stats(signal_type):
     """
-    Belirtilen sinyal türü için en güncel istatistiği döner (yoksa baseline'dan fallback yapar).
+    Belirtilen sinyal türü için veritabanındaki en güncel gerçek backtest istatistiğini döner.
+    Veritabanında kayıt yoksa (backtest henüz çalıştırılmadıysa) None döner.
     """
     stat_map = get_signal_backtest_map()
     if stat_map and signal_type in stat_map:
         return stat_map[signal_type]
-    
-    # Fallback to default baseline
-    for item in DEFAULT_BASELINE_STATS:
-        if item['signal_type'] == signal_type:
-            return item
     return None
 
 if __name__ == "__main__":
@@ -781,7 +624,6 @@ if __name__ == "__main__":
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
         
     print("Backtester baslatiliyor...")
-    seed_baseline_stats_if_empty()
     
     # Hızlı veya tam test
     if len(sys.argv) > 1 and sys.argv[1] == "--quick":

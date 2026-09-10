@@ -9,7 +9,7 @@ from database import (
     save_backtest_results, get_backtest_results, get_signal_backtest_map
 )
 from analyzer import analyze_stock, run_analysis, BIST_SYMBOLS
-from backtester import run_full_backtest, seed_baseline_stats_if_empty, get_signal_stats
+from backtester import run_full_backtest, get_signal_stats
 from sentiment import analyze_sentiment
 import os
 import json
@@ -19,7 +19,6 @@ app = Flask(__name__)
 
 # Veritabanını hazırla
 init_db()
-seed_baseline_stats_if_empty()
 
 @app.route('/')
 def index():
@@ -159,8 +158,11 @@ def api_get_backtest_stats():
     try:
         results = get_backtest_results()
         if not results:
-            seed_baseline_stats_if_empty()
-            results = get_backtest_results()
+            return jsonify({
+                "status": "not_run",
+                "message": "Henüz backtest çalıştırılmadı. Lütfen /api/backtest/run çağırın.",
+                "data": []
+            })
         return jsonify({"status": "success", "data": results})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})

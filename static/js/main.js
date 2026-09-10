@@ -436,12 +436,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Backtest Modal Elements & Handlers
+    // DOM Elements - Backtest Modal & Banner
+    const backtestNotRunBanner = document.getElementById('backtestNotRunBanner');
+    const btnRunInitialBacktest = document.getElementById('btnRunInitialBacktest');
     const backtestModal = document.getElementById('backtestModal');
     const btnOpenBacktestModal = document.getElementById('btnOpenBacktestModal');
     const btnCloseBacktestModal = document.getElementById('btnCloseBacktestModal');
     const backtestTableBody = document.getElementById('backtestTableBody');
     const btnRerunBacktest = document.getElementById('btnRerunBacktest');
+
+    // Check Backtest Status on Load
+    checkBacktestStatus();
+
+    function checkBacktestStatus() {
+        fetch('/api/backtest/stats')
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'not_run' || !res.data || res.data.length === 0) {
+                    if (backtestNotRunBanner) backtestNotRunBanner.style.display = 'flex';
+                } else {
+                    if (backtestNotRunBanner) backtestNotRunBanner.style.display = 'none';
+                }
+            })
+            .catch(() => {});
+    }
+
+    if (btnRunInitialBacktest) {
+        btnRunInitialBacktest.addEventListener('click', runFullBacktestFlow);
+    }
 
     if (btnOpenBacktestModal && backtestModal) {
         btnOpenBacktestModal.addEventListener('click', () => {
@@ -465,26 +487,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadBacktestTable() {
         if (!backtestTableBody) return;
-        backtestTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">⏳ İstatistikler alınıyor...</td></tr>`;
+        backtestTableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">⏳ İstatistikler alınıyor...</td></tr>`;
 
         fetch('/api/backtest/stats')
             .then(res => res.json())
             .then(result => {
-                if (result.status === 'success' && result.data) {
+                if (result.status === 'not_run' || !result.data || result.data.length === 0) {
+                    backtestTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 2rem; color: #fda4af;">
+                                ⚠️ <strong>Bu kurulumda 5 yıllık backtest henüz çalıştırılmadı.</strong><br>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Sinyal başarıları ve net alfalar gerçek hesaplama yapılana kadar gösterilmez.</span>
+                            </td>
+                        </tr>
+                    `;
+                } else if (result.status === 'success') {
                     renderBacktestModalTable(result.data);
                 } else {
-                    backtestTableBody.innerHTML = `<tr><td colspan="9" style="color: var(--danger); text-align: center;">Hata: ${result.message}</td></tr>`;
+                    backtestTableBody.innerHTML = `<tr><td colspan="10" style="color: var(--danger); text-align: center;">Hata: ${result.message}</td></tr>`;
                 }
             })
             .catch(err => {
-                backtestTableBody.innerHTML = `<tr><td colspan="9" style="color: var(--danger); text-align: center;">Bağlantı hatası: ${err}</td></tr>`;
+                backtestTableBody.innerHTML = `<tr><td colspan="10" style="color: var(--danger); text-align: center;">Bağlantı hatası: ${err}</td></tr>`;
             });
     }
 
     function renderBacktestModalTable(dataList) {
         if (!backtestTableBody) return;
         if (!dataList || dataList.length === 0) {
-            backtestTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 1.5rem;">Kayıtlı backtest istatistiği bulunamadı.</td></tr>`;
+            backtestTableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 1.5rem;">Kayıtlı backtest istatistiği bulunamadı.</td></tr>`;
             return;
         }
 
@@ -497,13 +528,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const winColor = item.win_rate >= 55 ? '#34d399' : (item.win_rate >= 50 ? '#38bdf8' : '#fbbf24');
             const retSign = item.avg_return >= 0 ? '+' : '';
             const retColor = item.avg_return >= 0 ? '#34d399' : '#f43f5e';
-            const excessSign = item.excess_return >= 0 ? '+' : '';
-            const excessColor = item.excess_return > 0 ? '#34d399' : '#f43f5e';
+            
+            const netExcessSign = item.excess_return >= 0 ? '+' : '';
+            const netExcessColor = item.excess_return > 0 ? '#34d399' : '#f43f5e';
 
-            // Alpha badge
-            const alphaLabel = item.excess_return > 0 
-                ? `<span style="color: #34d399; font-weight: 700;">${excessSign}%${item.excess_return.toFixed(2)}</span>`
-                : `<span style="color: #f43f5e; font-weight: 600;" title="Piyasa Getirisinin Altında">${excessSign}%${item.excess_return.toFixed(2)}</span>`;
+            const grossExcessVal = item.gross_excess_return !== undefined ? item.gross_excess_return : item.excess_return;
+            const grossExcessSign = grossExcessVal >= 0 ? '+' : '';
+            const grossExcessColor = grossExcessVal > 0 ? '#38bdf8' : '#94a3b8';
+
+            // Net Alfa rozeti
+            const netAlphaLabel = item.excess_return > 0 
+                ? `<span style="color: #34d399; font-weight: 700;">${netExcessSign}%${item.excess_return.toFixed(2)}</span>`
+                : `<span style="color: #f43f5e; font-weight: 600;" title="Maliyet Sonrası Piyasa Altı">${netExcessSign}%${item.excess_return.toFixed(2)}</span>`;
+
+            // Brüt Alfa rozeti
+            const grossAlphaLabel = `<span style="color: ${grossExcessColor}; font-size: 0.78rem;">${grossExcessSign}%${grossExcessVal.toFixed(2)}</span>`;
 
             // p-Value badge
             let pValHtml = '<span style="color: var(--text-secondary);">-</span>';
@@ -521,8 +560,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 let reason = 'Doğrulanmadı';
                 if (item.notes && item.notes.includes('Ters Yön')) reason = 'Ters Yön';
-                else if (item.notes && item.notes.includes('Piyasadan Zayıf')) reason = 'Negatif Alfa';
-                else if (item.notes && item.notes.includes('İstatistiksel Olarak Anlamsız')) reason = 'p &ge; 0.05';
+                else if (item.notes && item.notes.includes('MALİYET')) reason = 'Maliyet Altı';
+                else if (item.notes && item.notes.includes('ALFA ÜRETMİYOR')) reason = 'Negatif Alfa';
+                else if (item.notes && item.notes.includes('İSTATİSTİKSEL')) reason = 'p &ge; 0.05';
                 oosBadge = `<span class="badge-oos-warn" style="background: rgba(244,63,94,0.15); color: #f43f5e; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;" title="${item.notes || 'Doğrulama kriterlerini sağlamadı'}">❌ ${reason}</span>`;
             }
 
@@ -535,7 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${tfLabel}</td>
                     <td style="font-weight: 600;">${item.sample_size}</td>
                     <td style="color: ${winColor}; font-weight: 700;">%${item.win_rate.toFixed(1)}</td>
-                    <td>${alphaLabel}</td>
+                    <td>${netAlphaLabel}</td>
+                    <td>${grossAlphaLabel}</td>
                     <td style="color: ${retColor}; font-weight: 600;">${retSign}%${item.avg_return.toFixed(2)}</td>
                     <td>${pValHtml}</td>
                     <td>${oosBadge}</td>
@@ -544,34 +585,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    if (btnRerunBacktest) {
-        btnRerunBacktest.addEventListener('click', () => {
-            btnRerunBacktest.disabled = true;
-            btnRerunBacktest.innerHTML = `<span>⏳</span> 5 Yıllık Veriler Hesaplanıyor...`;
+    function runFullBacktestFlow() {
+        const btn = btnRerunBacktest || btnRunInitialBacktest;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span>⏳</span> 5 Yıllık Veriler Hesaplanıyor...`;
+        }
 
-            fetch('/api/backtest/run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ period: '5y' })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('✓ 5 Yıllık Backtest ve İstatistiksel Doğrulama başarıyla tamamlandı!');
-                    loadBacktestTable();
-                    loadTableData();
-                } else {
-                    alert('Backtest hatası: ' + data.message);
-                }
-            })
-            .catch(err => {
-                alert('Backtest çalıştırılırken hata: ' + err);
-            })
-            .finally(() => {
-                btnRerunBacktest.disabled = false;
-                btnRerunBacktest.innerHTML = `<span>🚀</span> Backtest'i Yeniden Hesapla`;
-            });
+        fetch('/api/backtest/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ period: '5y' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('✓ 5 Yıllık Backtest ve İşlem Maliyeti Doğrulaması başarıyla tamamlandı!');
+                checkBacktestStatus();
+                loadBacktestTable();
+                loadTableData();
+            } else {
+                alert('Backtest hatası: ' + data.message);
+            }
+        })
+        .catch(err => {
+            alert('Backtest çalıştırılırken hata: ' + err);
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<span>🚀</span> Backtest'i Yeniden Hesapla`;
+            }
         });
+    }
+
+    if (btnRerunBacktest) {
+        btnRerunBacktest.addEventListener('click', runFullBacktestFlow);
     }
 
     // Sorting Logic
@@ -712,17 +761,21 @@ document.addEventListener('DOMContentLoaded', () => {
             let backtestHtml = '<span style="color: var(--text-secondary); font-size: 0.8rem;">-</span>';
             if (stock.winRates && stock.winRates.length > 0) {
                 backtestHtml = stock.winRates.map(w => {
+                    if (w.sample_size === 0 || w.win_rate === null || w.win_rate === undefined) {
+                        return `<div style="color: #f87171; font-size: 0.72rem; font-weight: 500;">⚠️ Henüz Test Edilmedi</div>`;
+                    }
                     const excessSign = (w.excess_return || 0) >= 0 ? '+' : '';
                     const excessVal = (w.excess_return || 0).toFixed(1);
                     const excessColor = (w.excess_return || 0) > 0 ? '#34d399' : '#f43f5e';
                     const validatedTag = w.is_validated 
                         ? `<span style="color: #34d399; font-weight: 700;">✓</span>` 
-                        : `<span style="color: #f43f5e; font-weight: 700;" title="Doğrulanmadı / Negatif Alfa">⚠️</span>`;
+                        : `<span style="color: #f43f5e; font-weight: 700;" title="Doğrulanmadı / Negatif Net Alfa">⚠️</span>`;
                     const sampleWarn = (w.sample_size || 0) < 30 ? '<span title="N<30 Düşük Örneklem" style="color: #fbbf24;">*</span>' : '';
+                    const grossVal = w.gross_excess_return !== undefined ? w.gross_excess_return : w.excess_return;
                     
                     return `
-                        <div class="stat-win-badge" style="font-size: 0.78rem; line-height: 1.3;" title="N=${w.sample_size} | Ort Getiri: %${(w.avg_return || 0).toFixed(1)}">
-                            ${validatedTag} <b style="color: ${excessColor};">Alfa: ${excessSign}%${excessVal}</b> 
+                        <div class="stat-win-badge" style="font-size: 0.78rem; line-height: 1.3;" title="N=${w.sample_size} | Net Ort: %${(w.avg_return || 0).toFixed(1)} | Brüt Alfa: %${(grossVal || 0).toFixed(1)}">
+                            ${validatedTag} <b style="color: ${excessColor};">Net Alfa: ${excessSign}%${excessVal}</b> 
                             <span style="color: var(--text-secondary); font-size: 0.72rem;">(%${(w.win_rate || 0).toFixed(0)} Kz. N=${w.sample_size}${sampleWarn})</span>
                         </div>
                     `;

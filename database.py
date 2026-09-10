@@ -127,6 +127,9 @@ def init_db():
             std_dev REAL NOT NULL,
             benchmark_return REAL NOT NULL,
             excess_return REAL NOT NULL,
+            gross_avg_return REAL,
+            gross_excess_return REAL,
+            transaction_cost_pct REAL DEFAULT 0.15,
             train_win_rate REAL,
             test_win_rate REAL,
             train_avg_return REAL,
@@ -158,7 +161,10 @@ def init_db():
         ('signal_history', 'avg_return', 'REAL'),
         ('backtest_results', 'p_value', 'REAL'),
         ('backtest_results', 'is_significant', 'INTEGER DEFAULT 0'),
-        ('backtest_results', 'alpha_label', 'TEXT')
+        ('backtest_results', 'alpha_label', 'TEXT'),
+        ('backtest_results', 'gross_avg_return', 'REAL'),
+        ('backtest_results', 'gross_excess_return', 'REAL'),
+        ('backtest_results', 'transaction_cost_pct', 'REAL DEFAULT 0.15')
     ]
     
     for table, col, col_type in migration_columns:
@@ -719,11 +725,12 @@ def save_backtest_results(results_list):
             INSERT INTO backtest_results (
                 signal_type, signal_name, timeframe_key, horizon_days,
                 sample_size, win_rate, avg_return, median_return, max_loss,
-                std_dev, benchmark_return, excess_return, train_win_rate,
+                std_dev, benchmark_return, excess_return, gross_avg_return,
+                gross_excess_return, transaction_cost_pct, train_win_rate,
                 test_win_rate, train_avg_return, test_avg_return, p_value,
                 is_significant, alpha_label, is_validated, notes, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(signal_type) DO UPDATE SET
                 signal_name=excluded.signal_name,
                 timeframe_key=excluded.timeframe_key,
@@ -736,6 +743,9 @@ def save_backtest_results(results_list):
                 std_dev=excluded.std_dev,
                 benchmark_return=excluded.benchmark_return,
                 excess_return=excluded.excess_return,
+                gross_avg_return=excluded.gross_avg_return,
+                gross_excess_return=excluded.gross_excess_return,
+                transaction_cost_pct=excluded.transaction_cost_pct,
                 train_win_rate=excluded.train_win_rate,
                 test_win_rate=excluded.test_win_rate,
                 train_avg_return=excluded.train_avg_return,
@@ -759,6 +769,9 @@ def save_backtest_results(results_list):
             r.get('std_dev', 0.0),
             r.get('benchmark_return', 0.0),
             r.get('excess_return', 0.0),
+            r.get('gross_avg_return', r.get('avg_return', 0.0)),
+            r.get('gross_excess_return', r.get('excess_return', 0.0)),
+            r.get('transaction_cost_pct', 0.15),
             r.get('train_win_rate'),
             r.get('test_win_rate'),
             r.get('train_avg_return'),

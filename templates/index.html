@@ -31,8 +31,22 @@
             </div>
         </header>
 
-        <main>
-            <!-- 1. Top KPI Summary Grid -->
+        <main class="main-content">
+            <!-- Backtest Henüz Çalıştırılmadı Uyarı Banner'ı -->
+            <div id="backtestNotRunBanner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; justify-content: space-between; align-items: center; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.5rem;">⚠️</span>
+                    <div>
+                        <strong style="color: #f87171; font-size: 0.95rem;">Bu kurulumda 5 yıllık istatistiksel backtest henüz çalıştırılmadı!</strong>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px;">Sinyallerin kazanma oranları, net alfaları ve doğrulama durumları gösterilemiyor. Gerçek verileri hesaplamak için lütfen butona basın.</p>
+                    </div>
+                </div>
+                <button class="btn-primary" id="btnRunInitialBacktest" style="white-space: nowrap; font-size: 0.85rem; padding: 0.5rem 1rem;">
+                    <span>🚀</span> Backtest'i Şimdi Çalıştır
+                </button>
+            </div>
+
+            <!-- 1. Top Section: Executive KPI Cards -->
             <div class="stats-grid">
                 <!-- Portföy Değeri KPI -->
                 <div class="stat-card">
@@ -234,28 +248,32 @@
                         Bu tablo, her stratejinin BIST hisseleri üzerinde son 5 yıllık geçmiş veride simüle edilmiş gerçekleşme istatistiklerini, 
                         <strong>XU100 Endeks Farkını (Alfa)</strong>, <strong>t-testi İstatistiksel Anlamlılık ($p < 0.05$)</strong> ve <strong>Out-of-Sample (%25)</strong> doğrulama durumunu gösterir.
                     </p>
+                    <div style="background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8; padding: 0.6rem 0.9rem; border-radius: 4px; font-size: 0.8rem; color: #bae6fd; margin-bottom: 0.75rem;">
+                        💳 <strong>İşlem Maliyeti Entegrasyonu:</strong> Alış %0.15 + Satış %0.15 = <strong>%0.30 Round-Trip</strong> komisyon & BSMV kesintisi uygulanmıştır. Tüm doğrulama ve Alfa kararları <strong>Net Getiri</strong> üzerinden verilmektedir.
+                    </div>
                     <div style="background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e; padding: 0.6rem 0.9rem; border-radius: 4px; font-size: 0.8rem; color: #fda4af; margin-bottom: 1rem;">
-                        ⚠️ <strong>Önemli Uyarı:</strong> Ters yönde çalışan veya piyasa getirisinin altında kalan (Alfa &le; 0) stratejiler <em>ONAYLANMAMIŞ</em> olarak işaretlenir ve alım-satım kararlarında kullanılmamalıdır.
+                        ⚠️ <strong>Önemli Uyarı:</strong> Ters yönde çalışan veya maliyet sonrası piyasa getirisinin altında kalan (Net Alfa &le; 0) stratejiler <em>ONAYLANMAMIŞ</em> olarak işaretlenir ve alım-satım kararlarında kullanılmamalıdır.
                     </div>
 
                     <div class="table-container">
-                        <table style="width: 100%; font-size: 0.85rem;">
+                        <table style="width: 100%; font-size: 0.82rem;">
                             <thead>
                                 <tr style="background: rgba(255,255,255,0.03);">
                                     <th>Strateji</th>
                                     <th>Yön</th>
                                     <th>Vade</th>
                                     <th>İşlem (N)</th>
-                                    <th>Kazanma %</th>
-                                    <th>XU100 Farkı (Alfa)</th>
-                                    <th>Ort. Getiri</th>
+                                    <th>Net Kaz.%</th>
+                                    <th>Net Alfa</th>
+                                    <th>Brüt Alfa</th>
+                                    <th>Net Getiri</th>
                                     <th>p-Değeri</th>
                                     <th>Doğrulama</th>
                                 </tr>
                             </thead>
                             <tbody id="backtestTableBody">
                                 <tr>
-                                    <td colspan="9" style="text-align: center; padding: 1.5rem;">İstatistikler yükleniyor...</td>
+                                    <td colspan="10" style="text-align: center; padding: 1.5rem;">İstatistikler yükleniyor...</td>
                                 </tr>
                             </tbody>
                         </table>
