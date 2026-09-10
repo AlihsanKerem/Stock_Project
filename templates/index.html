@@ -171,6 +171,9 @@
                         <button class="filter-btn active" data-timeframe="all">
                             <span>🌐</span> Tümü (<span id="countAll">0</span>)
                         </button>
+                        <button class="filter-btn" data-timeframe="VALIDATED_ONLY" style="color: #38bdf8; font-weight: 600;">
+                            <span>⭐</span> Doğrulanmış & Pozitif Alfa
+                        </button>
                         <button class="filter-btn short-btn" data-timeframe="SHORT">
                             <span>⚡</span> Kısa Vade (1-7G)
                         </button>
@@ -200,7 +203,7 @@
                                 <th data-sort="price">Fiyat (₺)</th>
                                 <th data-sort="timeframe">Vade & Yön</th>
                                 <th data-sort="signals">Sinyal / Durum</th>
-                                <th>Ölçülen Başarı (Backtest)</th>
+                                <th>Backtest Alfa & Başarı</th>
                                 <th>Stop-Loss (ATR)</th>
                                 <th data-sort="volatility">Risk (Volatilite)</th>
                                 <th data-sort="rsi">RSI</th>
@@ -221,16 +224,19 @@
         
         <!-- Backtest Sonuçları & OOS Doğrulama Modalı -->
         <div id="backtestModal" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 900px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-content" style="max-width: 960px; max-height: 85vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h3>📈 BIST Stratejileri 5 Yıllık Backtest & Doğrulama Raporu</h3>
+                    <h3>📈 BIST Stratejileri 5 Yıllık İstatistiksel Backtest & Doğrulama Raporu</h3>
                     <button class="close-btn" id="btnCloseBacktestModal">&times;</button>
                 </div>
                 <div class="modal-body" style="padding: 1rem 0;">
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        Bu tablo, her stratejinin BIST100 hisseleri üzerinde son 5 yıllık geçmiş veride simüle edilmiş gerçekleşme istatistiklerini ve 
-                        Out-of-Sample (örneklem dışı %25 test seti) doğrulama sonuçlarını gösterir.
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        Bu tablo, her stratejinin BIST hisseleri üzerinde son 5 yıllık geçmiş veride simüle edilmiş gerçekleşme istatistiklerini, 
+                        <strong>XU100 Endeks Farkını (Alfa)</strong>, <strong>t-testi İstatistiksel Anlamlılık ($p < 0.05$)</strong> ve <strong>Out-of-Sample (%25)</strong> doğrulama durumunu gösterir.
                     </p>
+                    <div style="background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e; padding: 0.6rem 0.9rem; border-radius: 4px; font-size: 0.8rem; color: #fda4af; margin-bottom: 1rem;">
+                        ⚠️ <strong>Önemli Uyarı:</strong> Ters yönde çalışan veya piyasa getirisinin altında kalan (Alfa &le; 0) stratejiler <em>ONAYLANMAMIŞ</em> olarak işaretlenir ve alım-satım kararlarında kullanılmamalıdır.
+                    </div>
 
                     <div class="table-container">
                         <table style="width: 100%; font-size: 0.85rem;">
@@ -238,13 +244,13 @@
                                 <tr style="background: rgba(255,255,255,0.03);">
                                     <th>Strateji</th>
                                     <th>Yön</th>
-                                    <th>Vade Ufku</th>
-                                    <th>İşlem Sayısı (N)</th>
+                                    <th>Vade</th>
+                                    <th>İşlem (N)</th>
                                     <th>Kazanma %</th>
-                                    <th>Ort. Getiri</th>
                                     <th>XU100 Farkı (Alfa)</th>
-                                    <th>Max Kayıp</th>
-                                    <th>OOS Doğrulama</th>
+                                    <th>Ort. Getiri</th>
+                                    <th>p-Değeri</th>
+                                    <th>Doğrulama</th>
                                 </tr>
                             </thead>
                             <tbody id="backtestTableBody">

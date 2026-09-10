@@ -215,6 +215,21 @@ def check_alerts_job():
         except Exception as e:
             print(f"Alarm kontrol hatası ({symbol}): {e}")
 
+def scheduled_backtest_job():
+    """
+    Haftalık periyodik backtest güncelleme görevi.
+    Pazar akşamları çalışarak son 5 yıllık veriyi ve sinyal istatistiklerini günceller.
+    """
+    print("\n" + "="*50)
+    print("Haftalık Otomatik Backtest Güncellemesi Başlıyor...")
+    print("="*50)
+    try:
+        from backtester import run_full_backtest
+        results = run_full_backtest(period="5y")
+        print(f"Haftalık Backtest Tamamlandı: {len(results)} kural güncellendi.")
+    except Exception as e:
+        print(f"Haftalık backtest çalıştırılırken hata: {e}")
+
 def main():
     print("Sistem başlatıldı. Telegram ve API ayarlarınızı .env dosyasından kontrol ediniz.")
     print("Günlük tarama her gün saat 18:30'da çalışacak şekilde ayarlandı.")
@@ -234,6 +249,9 @@ def main():
 
     # Her 10 dakikada bir kullanıcı alarmlarını kontrol et
     schedule.every(10).minutes.do(check_alerts_job)
+
+    # Her Pazar akşamı 22:00'de haftalık backtest çalıştır (Yeni hafta öncesi)
+    schedule.every().sunday.at("22:00").do(scheduled_backtest_job)
     
     while True:
         schedule.run_pending()

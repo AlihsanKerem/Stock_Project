@@ -131,6 +131,9 @@ def init_db():
             test_win_rate REAL,
             train_avg_return REAL,
             test_avg_return REAL,
+            p_value REAL,
+            is_significant INTEGER DEFAULT 0,
+            alpha_label TEXT,
             is_validated INTEGER DEFAULT 1,
             notes TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -152,7 +155,10 @@ def init_db():
         ('signal_history', 'is_validated', 'INTEGER DEFAULT 1'),
         ('signal_history', 'sample_size', 'INTEGER'),
         ('signal_history', 'win_rate', 'REAL'),
-        ('signal_history', 'avg_return', 'REAL')
+        ('signal_history', 'avg_return', 'REAL'),
+        ('backtest_results', 'p_value', 'REAL'),
+        ('backtest_results', 'is_significant', 'INTEGER DEFAULT 0'),
+        ('backtest_results', 'alpha_label', 'TEXT')
     ]
     
     for table, col, col_type in migration_columns:
@@ -699,7 +705,8 @@ def save_backtest_results(results_list):
     results_list: list of dicts with keys:
     signal_type, signal_name, timeframe_key, horizon_days, sample_size, win_rate,
     avg_return, median_return, max_loss, std_dev, benchmark_return, excess_return,
-    train_win_rate, test_win_rate, train_avg_return, test_avg_return, is_validated, notes
+    train_win_rate, test_win_rate, train_avg_return, test_avg_return, p_value,
+    is_significant, alpha_label, is_validated, notes
     """
     if not results_list:
         return
@@ -713,10 +720,10 @@ def save_backtest_results(results_list):
                 signal_type, signal_name, timeframe_key, horizon_days,
                 sample_size, win_rate, avg_return, median_return, max_loss,
                 std_dev, benchmark_return, excess_return, train_win_rate,
-                test_win_rate, train_avg_return, test_avg_return, is_validated,
-                notes, updated_at
+                test_win_rate, train_avg_return, test_avg_return, p_value,
+                is_significant, alpha_label, is_validated, notes, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(signal_type) DO UPDATE SET
                 signal_name=excluded.signal_name,
                 timeframe_key=excluded.timeframe_key,
@@ -733,6 +740,9 @@ def save_backtest_results(results_list):
                 test_win_rate=excluded.test_win_rate,
                 train_avg_return=excluded.train_avg_return,
                 test_avg_return=excluded.test_avg_return,
+                p_value=excluded.p_value,
+                is_significant=excluded.is_significant,
+                alpha_label=excluded.alpha_label,
                 is_validated=excluded.is_validated,
                 notes=excluded.notes,
                 updated_at=CURRENT_TIMESTAMP
@@ -753,6 +763,9 @@ def save_backtest_results(results_list):
             r.get('test_win_rate'),
             r.get('train_avg_return'),
             r.get('test_avg_return'),
+            r.get('p_value'),
+            1 if r.get('is_significant') else 0,
+            r.get('alpha_label', 'Piyasadan Farksız'),
             1 if r.get('is_validated', True) else 0,
             r.get('notes', '')
         ))

@@ -491,18 +491,40 @@ document.addEventListener('DOMContentLoaded', () => {
         backtestTableBody.innerHTML = dataList.map(item => {
             const isBuy = !item.signal_type.includes('risk') && !item.signal_type.includes('kirilimi') && !item.signal_type.includes('pahali');
             const dirBadge = isBuy 
-                ? `<span class="badge-buy">AL</span>` 
-                : `<span class="badge-sell">SAT / RİSK</span>`;
+                ? `<span class="badge-buy" style="font-size: 0.75rem;">AL</span>` 
+                : `<span class="badge-sell" style="font-size: 0.75rem;">SAT / KAÇIN</span>`;
             
-            const winColor = item.win_rate >= 60 ? '#34d399' : (item.win_rate >= 50 ? '#38bdf8' : '#fbbf24');
+            const winColor = item.win_rate >= 55 ? '#34d399' : (item.win_rate >= 50 ? '#38bdf8' : '#fbbf24');
             const retSign = item.avg_return >= 0 ? '+' : '';
             const retColor = item.avg_return >= 0 ? '#34d399' : '#f43f5e';
             const excessSign = item.excess_return >= 0 ? '+' : '';
-            const excessColor = item.excess_return >= 0 ? '#34d399' : '#f43f5e';
+            const excessColor = item.excess_return > 0 ? '#34d399' : '#f43f5e';
 
-            const oosBadge = item.is_validated 
-                ? `<span class="badge-oos-ok">✓ Onaylandı</span>` 
-                : `<span class="badge-oos-warn">⚠️ Sapma Var</span>`;
+            // Alpha badge
+            const alphaLabel = item.excess_return > 0 
+                ? `<span style="color: #34d399; font-weight: 700;">${excessSign}%${item.excess_return.toFixed(2)}</span>`
+                : `<span style="color: #f43f5e; font-weight: 600;" title="Piyasa Getirisinin Altında">${excessSign}%${item.excess_return.toFixed(2)}</span>`;
+
+            // p-Value badge
+            let pValHtml = '<span style="color: var(--text-secondary);">-</span>';
+            if (item.p_value !== undefined && item.p_value !== null) {
+                const isSig = item.p_value < 0.05;
+                const pColor = isSig ? '#34d399' : '#fbbf24';
+                const pTag = isSig ? 'Anlamlı' : 'Önemsiz';
+                pValHtml = `<span style="color: ${pColor}; font-weight: 600;" title="t-testi tek örneklem p=${item.p_value.toFixed(4)}">p=${item.p_value.toFixed(3)} <small>(${pTag})</small></span>`;
+            }
+
+            // Validation status badge
+            let oosBadge = '';
+            if (item.is_validated) {
+                oosBadge = `<span class="badge-oos-ok" style="background: rgba(16,185,129,0.15); color: #34d399; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">✓ ONAYLANDI</span>`;
+            } else {
+                let reason = 'Doğrulanmadı';
+                if (item.notes && item.notes.includes('Ters Yön')) reason = 'Ters Yön';
+                else if (item.notes && item.notes.includes('Piyasadan Zayıf')) reason = 'Negatif Alfa';
+                else if (item.notes && item.notes.includes('İstatistiksel Olarak Anlamsız')) reason = 'p &ge; 0.05';
+                oosBadge = `<span class="badge-oos-warn" style="background: rgba(244,63,94,0.15); color: #f43f5e; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;" title="${item.notes || 'Doğrulama kriterlerini sağlamadı'}">❌ ${reason}</span>`;
+            }
 
             const tfLabel = item.timeframe_key === 'SHORT' ? 'Kısa (7G)' : (item.timeframe_key === 'MEDIUM' ? 'Orta (20G)' : 'Uzun (60G)');
 
@@ -513,9 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${tfLabel}</td>
                     <td style="font-weight: 600;">${item.sample_size}</td>
                     <td style="color: ${winColor}; font-weight: 700;">%${item.win_rate.toFixed(1)}</td>
+                    <td>${alphaLabel}</td>
                     <td style="color: ${retColor}; font-weight: 600;">${retSign}%${item.avg_return.toFixed(2)}</td>
-                    <td style="color: ${excessColor}; font-weight: 600;">${excessSign}%${item.excess_return.toFixed(2)}</td>
-                    <td style="color: #f43f5e;">%${item.max_loss.toFixed(1)}</td>
+                    <td>${pValHtml}</td>
                     <td>${oosBadge}</td>
                 </tr>
             `;
@@ -535,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert('✓ 5 Yıllık Backtest ve Out-of-Sample doğrulama başarıyla tamamlandı!');
+                    alert('✓ 5 Yıllık Backtest ve İstatistiksel Doğrulama başarıyla tamamlandı!');
                     loadBacktestTable();
                     loadTableData();
                 } else {
@@ -579,7 +601,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Filter
         let filtered = processedData.filter(stock => {
             let passFilter = true;
-            if (currentFilter === 'SHORT') {
+            if (currentFilter === 'VALIDATED_ONLY') {
+                passFilter = stock.winRates && stock.winRates.some(w => w.is_validated === 1 && w.excess_return > 0);
+            } else if (currentFilter === 'SHORT') {
                 passFilter = stock.timeframeKeys.includes('SHORT');
             } else if (currentFilter === 'MEDIUM') {
                 passFilter = stock.timeframeKeys.includes('MEDIUM');
@@ -684,18 +708,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }).join('');
             }
 
-            // Ölçülen Başarı (Gerçek Backtest İstatistiği)
+            // Ölçülen Başarı & Alfa (Gerçek Backtest İstatistiği)
             let backtestHtml = '<span style="color: var(--text-secondary); font-size: 0.8rem;">-</span>';
             if (stock.winRates && stock.winRates.length > 0) {
                 backtestHtml = stock.winRates.map(w => {
-                    const retSign = w.avg_return >= 0 ? '+' : '';
-                    const sampleWarn = w.sample_size < 30 ? '<span title="N<30 Düşük Örneklem" style="color: #fbbf24;"> ⚠️</span>' : '';
+                    const excessSign = (w.excess_return || 0) >= 0 ? '+' : '';
+                    const excessVal = (w.excess_return || 0).toFixed(1);
+                    const excessColor = (w.excess_return || 0) > 0 ? '#34d399' : '#f43f5e';
+                    const validatedTag = w.is_validated 
+                        ? `<span style="color: #34d399; font-weight: 700;">✓</span>` 
+                        : `<span style="color: #f43f5e; font-weight: 700;" title="Doğrulanmadı / Negatif Alfa">⚠️</span>`;
+                    const sampleWarn = (w.sample_size || 0) < 30 ? '<span title="N<30 Düşük Örneklem" style="color: #fbbf24;">*</span>' : '';
+                    
                     return `
-                        <div class="stat-win-badge" title="Tetiklenme: ${w.sample_size} işlem | XU100 Farkı: ${w.excess_return >= 0 ? '+' : ''}%${w.excess_return}%">
-                            Kazanma: %${w.win_rate.toFixed(0)} (Ort: ${retSign}%${w.avg_return.toFixed(1)})${sampleWarn}
+                        <div class="stat-win-badge" style="font-size: 0.78rem; line-height: 1.3;" title="N=${w.sample_size} | Ort Getiri: %${(w.avg_return || 0).toFixed(1)}">
+                            ${validatedTag} <b style="color: ${excessColor};">Alfa: ${excessSign}%${excessVal}</b> 
+                            <span style="color: var(--text-secondary); font-size: 0.72rem;">(%${(w.win_rate || 0).toFixed(0)} Kz. N=${w.sample_size}${sampleWarn})</span>
                         </div>
                     `;
-                }).join('<br>');
+                }).join('<div style="margin-top: 2px;"></div>');
             }
 
             // Stop-Loss & ATR

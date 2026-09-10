@@ -6,15 +6,15 @@ import time
 from database import save_stock_data, save_signals
 from backtester import get_signal_stats, seed_baseline_stats_if_empty
 
-# BIST 100 hisse senetleri listesi
+# BIST 100 hisse senetleri listesi (404/delisted ECGYO, KOZAL, KOZAA, IPEKE, PENTI temizlendi)
 BIST_SYMBOLS = [
     'AEFES.IS', 'AGHOL.IS', 'AHGAZ.IS', 'AKBNK.IS', 'AKCNS.IS', 'AKFGY.IS', 'AKSA.IS', 'AKSEN.IS', 'ALARK.IS', 'ALBRK.IS',
     'ALFAS.IS', 'ASGYO.IS', 'ASELS.IS', 'ASTOR.IS', 'BERA.IS', 'BIENY.IS', 'BIMAS.IS', 'BRKVY.IS', 'BRYAT.IS', 'BUCIM.IS',
-    'CCOLA.IS', 'CANTE.IS', 'CWENE.IS', 'CIMSA.IS', 'DOHOL.IS', 'DOAS.IS', 'ECILC.IS', 'ECGYO.IS', 'ENJSA.IS', 'ENKAI.IS',
+    'CCOLA.IS', 'CANTE.IS', 'CWENE.IS', 'CIMSA.IS', 'DOHOL.IS', 'DOAS.IS', 'ECILC.IS', 'ENJSA.IS', 'ENKAI.IS',
     'EREGL.IS', 'EUPWR.IS', 'EUREN.IS', 'FROTO.IS', 'GARAN.IS', 'GENIL.IS', 'GESAN.IS', 'GUBRF.IS', 'GWIND.IS', 'HALKB.IS',
-    'HEKTS.IS', 'IPEKE.IS', 'ISCTR.IS', 'ISGYO.IS', 'ISMEN.IS', 'IZENR.IS', 'KCHOL.IS', 'KCAER.IS', 'KARSN.IS', 'KARTN.IS',
-    'KLSER.IS', 'KMPUR.IS', 'KONTR.IS', 'KONYA.IS', 'KOZAL.IS', 'KOZAA.IS', 'KRDMD.IS', 'KZBGY.IS', 'MAVI.IS', 'MGROS.IS',
-    'MIATK.IS', 'ODAS.IS', 'OTKAR.IS', 'OYAKC.IS', 'PENTI.IS', 'PETKM.IS', 'PGSUS.IS', 'PSGYO.IS', 'QUAGR.IS', 'SAHOL.IS',
+    'HEKTS.IS', 'ISCTR.IS', 'ISGYO.IS', 'ISMEN.IS', 'IZENR.IS', 'KCHOL.IS', 'KCAER.IS', 'KARSN.IS', 'KARTN.IS',
+    'KLSER.IS', 'KMPUR.IS', 'KONTR.IS', 'KONYA.IS', 'KRDMD.IS', 'KZBGY.IS', 'MAVI.IS', 'MGROS.IS',
+    'MIATK.IS', 'ODAS.IS', 'OTKAR.IS', 'OYAKC.IS', 'PETKM.IS', 'PGSUS.IS', 'PSGYO.IS', 'QUAGR.IS', 'SAHOL.IS',
     'SASA.IS', 'SMRTG.IS', 'SKBNK.IS', 'SNGYO.IS', 'SOKM.IS', 'TABGD.IS', 'TAVHL.IS', 'TCELL.IS', 'THYAO.IS', 'TKFEN.IS',
     'TOASO.IS', 'TSKB.IS', 'TTKOM.IS', 'TTRAK.IS', 'TUKAS.IS', 'TUPRS.IS', 'ULKER.IS', 'VAKBN.IS', 'VESTL.IS', 'YKBNK.IS',
     'YYAPI.IS', 'ZOREN.IS'
@@ -135,6 +135,7 @@ def analyze_stock(symbol):
         # Sinyal 1: Değer Avcısı (Uzun Vade Al)
         if pb_ratio is not None and pb_ratio <= 1.0 and current_rsi is not None and current_rsi < 30:
             bstat = get_signal_stats('deger_avcisi') or {}
+            ex_ret = bstat.get('excess_return', -0.52)
             buy_signals.append({
                 "symbol": symbol,
                 "type": "deger_avcisi",
@@ -149,17 +150,21 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_buy,
                 "risk_level": dynamic_risk_level,
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 68.4),
-                "avg_return": bstat.get('avg_return', 18.6),
-                "excess_return": bstat.get('excess_return', 7.4),
-                "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', 18.6):.1f} Ort.",
+                "win_rate": bstat.get('win_rate', 46.4),
+                "avg_return": bstat.get('avg_return', 1.79),
+                "excess_return": ex_ret,
+                "p_value": bstat.get('p_value', 0.485),
+                "is_significant": bstat.get('is_significant', 0),
+                "alpha_label": bstat.get('alpha_label', 'Alfa Yok / Piyasadan Farksız'),
+                "is_validated": bstat.get('is_validated', 0),
+                "target_return": f"Alfa: %{ex_ret:+.1f} (Ort: %{bstat.get('avg_return', 1.79):+.1f})" if ex_ret > 0 else f"Alfa Yok (%{ex_ret:+.1f})",
                 "rule_desc": f"PD/DD: {pb_ratio:.2f} <= 1.0 & RSI: {current_rsi:.1f} < 30"
             })
 
         # Sinyal 2: Hacim Patlaması (Kısa Vade Al)
         if price_up and current_volume > volume_ma60:
             bstat = get_signal_stats('hacim_onayi') or {}
+            ex_ret = bstat.get('excess_return', 0.59)
             buy_signals.append({
                 "symbol": symbol,
                 "type": "hacim_onayi",
@@ -174,17 +179,21 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_buy,
                 "risk_level": dynamic_risk_level,
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 57.6),
-                "avg_return": bstat.get('avg_return', 2.95),
-                "excess_return": bstat.get('excess_return', 1.0),
+                "win_rate": bstat.get('win_rate', 55.7),
+                "avg_return": bstat.get('avg_return', 1.12),
+                "excess_return": ex_ret,
+                "p_value": bstat.get('p_value', 0.001),
+                "is_significant": bstat.get('is_significant', 1),
+                "alpha_label": bstat.get('alpha_label', 'Pozitif Alfa'),
                 "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', 2.95):.1f} Ort.",
+                "target_return": f"Alfa: %{ex_ret:+.1f} (Ort: %{bstat.get('avg_return', 1.12):+.1f})" if ex_ret > 0 else f"Alfa Yok (%{ex_ret:+.1f})",
                 "rule_desc": f"Fiyat Artıda & Hacim > 60G Ort."
             })
 
         # Sinyal 3: Temettü Kalesi (Uzun Vade Al)
         if div_yield is not None and div_yield > 5.0 and pe_ratio is not None and pe_ratio < 15.0:
             bstat = get_signal_stats('temettu_kalesi') or {}
+            ex_ret = bstat.get('excess_return', -3.35)
             buy_signals.append({
                 "symbol": symbol,
                 "type": "temettu_kalesi",
@@ -199,11 +208,14 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_buy,
                 "risk_level": dynamic_risk_level,
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 65.5),
-                "avg_return": bstat.get('avg_return', 14.2),
-                "excess_return": bstat.get('excess_return', 3.0),
-                "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', 14.2):.1f} Ort.",
+                "win_rate": bstat.get('win_rate', 56.1),
+                "avg_return": bstat.get('avg_return', 3.74),
+                "excess_return": ex_ret,
+                "p_value": bstat.get('p_value', 0.082),
+                "is_significant": bstat.get('is_significant', 0),
+                "alpha_label": bstat.get('alpha_label', 'Alfa Yok / Endeks Altı'),
+                "is_validated": bstat.get('is_validated', 0),
+                "target_return": f"Alfa: %{ex_ret:+.1f} (Ort: %{bstat.get('avg_return', 3.74):+.1f})" if ex_ret > 0 else f"Endeks Altı (%{ex_ret:+.1f})",
                 "rule_desc": f"Temettü: %{div_yield:.1f} > %5 & F/K: {pe_ratio:.1f} < 15"
             })
 
@@ -214,6 +226,7 @@ def analyze_stock(symbol):
         
         if sma5_cross_up and current_volume > (volume_ma60 * 0.8) and trend_ok and rsi_ok:
             bstat = get_signal_stats('al_sat_haftalik') or {}
+            ex_ret = bstat.get('excess_return', 0.69)
             buy_signals.append({
                 "symbol": symbol,
                 "type": "al_sat_haftalik",
@@ -228,11 +241,14 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_buy,
                 "risk_level": dynamic_risk_level,
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 61.2),
-                "avg_return": bstat.get('avg_return', 3.84),
-                "excess_return": bstat.get('excess_return', 1.89),
+                "win_rate": bstat.get('win_rate', 61.7),
+                "avg_return": bstat.get('avg_return', 1.88),
+                "excess_return": ex_ret,
+                "p_value": bstat.get('p_value', 0.018),
+                "is_significant": bstat.get('is_significant', 1),
+                "alpha_label": bstat.get('alpha_label', 'Pozitif Alfa'),
                 "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', 3.84):.1f} Ort.",
+                "target_return": f"Alfa: %{ex_ret:+.1f} (Ort: %{bstat.get('avg_return', 1.88):+.1f})",
                 "rule_desc": f"SMA5 Kırılımı + Hacimli + Fiyat > SMA50 + RSI(50-70)"
             })
 
@@ -240,6 +256,7 @@ def analyze_stock(symbol):
         sma20_cross_up = (prev_close < prev_sma20) and (current_price > current_sma20)
         if sma20_cross_up and current_volume > volume_ma60 and trend_ok and rsi_ok:
             bstat = get_signal_stats('al_sat_aylik') or {}
+            ex_ret = bstat.get('excess_return', 2.63)
             buy_signals.append({
                 "symbol": symbol,
                 "type": "al_sat_aylik",
@@ -254,11 +271,14 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_buy,
                 "risk_level": dynamic_risk_level,
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 64.8),
-                "avg_return": bstat.get('avg_return', 7.42),
-                "excess_return": bstat.get('excess_return', 3.32),
+                "win_rate": bstat.get('win_rate', 62.5),
+                "avg_return": bstat.get('avg_return', 4.01),
+                "excess_return": ex_ret,
+                "p_value": bstat.get('p_value', 0.006),
+                "is_significant": bstat.get('is_significant', 1),
+                "alpha_label": bstat.get('alpha_label', 'Pozitif Alfa'),
                 "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', 7.42):.1f} Ort.",
+                "target_return": f"Alfa: %{ex_ret:+.1f} (Ort: %{bstat.get('avg_return', 4.01):+.1f})",
                 "rule_desc": f"SMA20 Kırılımı + Hacimli + Fiyat > SMA50 + RSI(50-70)"
             })
 
@@ -280,11 +300,14 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_sell,
                 "risk_level": "Yüksek Risk",
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 62.2),
-                "avg_return": bstat.get('avg_return', -3.15),
-                "excess_return": bstat.get('excess_return', -5.1),
-                "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', -3.15):.1f} Risk",
+                "win_rate": bstat.get('win_rate', 41.1),
+                "avg_return": bstat.get('avg_return', 2.74),
+                "excess_return": bstat.get('excess_return', 1.55),
+                "p_value": bstat.get('p_value', 0.001),
+                "is_significant": bstat.get('is_significant', 0),
+                "alpha_label": bstat.get('alpha_label', 'Yön Ters'),
+                "is_validated": 0,
+                "target_return": "⚠️ Yön Ters (%+2.74)",
                 "rule_desc": f"RSI > 70 ({current_rsi:.1f}) & Momentum Kaybı"
             })
 
@@ -306,11 +329,14 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_sell,
                 "risk_level": "Yüksek Risk",
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 64.1),
-                "avg_return": bstat.get('avg_return', -6.80),
-                "excess_return": bstat.get('excess_return', -10.9),
-                "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', -6.80):.1f} Risk",
+                "win_rate": bstat.get('win_rate', 50.0),
+                "avg_return": bstat.get('avg_return', -0.36),
+                "excess_return": bstat.get('excess_return', -1.56),
+                "p_value": bstat.get('p_value', 0.312),
+                "is_significant": bstat.get('is_significant', 0),
+                "alpha_label": bstat.get('alpha_label', 'Yetersiz Düşüş'),
+                "is_validated": 0,
+                "target_return": "Risk: %-0.36 (Zayıf)",
                 "rule_desc": f"SMA20 Aşağı Kırılımı + Hacimli + Fiyat < SMA50"
             })
 
@@ -331,11 +357,14 @@ def analyze_stock(symbol):
                 "stop_loss": stop_loss_sell,
                 "risk_level": "Yüksek Risk",
                 "sample_size": bstat.get('sample_size', 0),
-                "win_rate": bstat.get('win_rate', 59.3),
-                "avg_return": bstat.get('avg_return', -8.40),
-                "excess_return": bstat.get('excess_return', -19.6),
-                "is_validated": bstat.get('is_validated', 1),
-                "target_return": f"%{bstat.get('avg_return', -8.40):.1f} Risk",
+                "win_rate": bstat.get('win_rate', 31.6),
+                "avg_return": bstat.get('avg_return', 15.39),
+                "excess_return": bstat.get('excess_return', 8.30),
+                "p_value": bstat.get('p_value', 0.001),
+                "is_significant": bstat.get('is_significant', 0),
+                "alpha_label": bstat.get('alpha_label', 'Yön Ters'),
+                "is_validated": 0,
+                "target_return": "⚠️ Yön Ters (%+15.39)",
                 "rule_desc": f"PD/DD: {pb_ratio:.1f} > 8.0 & RSI: {current_rsi:.1f} > 65"
             })
 
@@ -354,26 +383,34 @@ def analyze_stock(symbol):
             avg_r = sig.get('avg_return', 0.0)
             excess_r = sig.get('excess_return', 0.0)
             action = sig.get('action', 'BUY')
+            is_val = sig.get('is_validated', 0)
+            p_val = sig.get('p_value', 1.0)
 
             # Düşük örneklem uyarısı
             low_sample_warn = " ⚠️ (N<30 Düşük Örneklem)" if n_samples < 30 else ""
             
-            # Doğrulama rozeti
-            val_text = "✓ Doğrulandı" if sig.get('is_validated') else "⚠️ Doğrulanmadı"
+            # Doğrulama ve Alfa Durumu
+            val_text = f"✓ Doğrulandı (p={p_val:.3f})" if is_val else f"⚠️ Doğrulanmadı / Güvensiz (p={p_val:.3f})"
 
             # İstatistiksel şeffaf mesaj oluşturma
-            if action == 'BUY':
+            if is_val:
                 msg = (
                     f"🟢 <b>{sig['name']}</b> ({sig['timeframe_label']}): {clean_symbol} teknik/temel şartları sağladı. "
-                    f"[Geçmişte {n_samples} işlemde %{win_r:.1f} kazanma, Ort: %{avg_r:+.1f}, BIST100 Farkı: %{excess_r:+.1f} | {val_text}{low_sample_warn}]. "
-                    f"Stop-Loss Önerisi: ₺{sig['stop_loss']:.2f} (ATR: ₺{sig['atr']:.2f}, Volatilite: %{sig['volatility']:.1f})."
+                    f"[Kazanma: %{win_r:.1f} | <b>Alfa (XU100 Farkı): %{excess_r:+.1f}</b> | Ort Getiri: %{avg_r:+.1f} | {val_text}{low_sample_warn}]. "
+                    f"Stop-Loss: ₺{sig['stop_loss']:.2f} (ATR: ₺{sig['atr']:.2f}, Volatilite: %{sig['volatility']:.1f})."
                 )
             else:
-                msg = (
-                    f"🔴 <b>{sig['name']}</b> ({sig['timeframe_label']}): {clean_symbol} risk/satış bölgesinde ({sig['rule_desc']}). "
-                    f"[Geçmişte {n_samples} benzer durumda %{win_r:.1f} oranında ortalama %{avg_r:.1f} düzeltme yaşandı | {val_text}{low_sample_warn}]. "
-                    f"Direnç/Stop Seviyesi: ₺{sig['stop_loss']:.2f} (ATR: ₺{sig['atr']:.2f})."
-                )
+                if action == 'SELL' and avg_r >= 0:
+                    msg = (
+                        f"⚠️ <b>{sig['name']} (DOĞRULANMAMIŞ / YÖN TERS)</b>: {clean_symbol} risk bölgesinde ({sig['rule_desc']}) "
+                        f"ancak geçmiş 5 yılda hisseler düşmek yerine ortalama %{avg_r:+.1f} artış kaydetmiştir. "
+                        f"[Düşüş Oranı: %{win_r:.1f} | {val_text}{low_sample_warn}]. Pozisyon kararı için önerilmez."
+                    )
+                else:
+                    msg = (
+                        f"⚠️ <b>{sig['name']} (ALFA ÜRETMİYOR / GÜVENSİZ)</b>: {clean_symbol} şartları sağladı ancak BIST100'e göre "
+                        f"anlamlı bir getiri avantajı sağlamamaktadır [Alfa: %{excess_r:+.1f}, Kazanma: %{win_r:.1f} | {val_text}{low_sample_warn}]."
+                    )
 
             if is_conflict:
                 msg += " <b>⚠️ DİKKAT:</b> Bu hissede hem AL hem SAT/RİSK sinyalleri aynı anda tetiklendi (Karışık Görünüm)."
