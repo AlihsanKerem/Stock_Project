@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadTableData() {
         tableBody.innerHTML = `
             <tr class="loading-row">
-                <td colspan="10" style="text-align:center; padding: 2rem; color: var(--text-secondary);">
+                <td colspan="11" style="text-align:center; padding: 2rem; color: var(--text-secondary);">
                     ⏳ Veriler yükleniyor, lütfen bekleyin...
                 </td>
             </tr>
@@ -300,59 +300,90 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (countAll) countAll.textContent = processedData.length;
                     applyFilterAndRender();
                 } else {
-                    tableBody.innerHTML = `<tr><td colspan="10" style="color: var(--danger); text-align:center; padding: 2rem;">Hata: ${result.message}</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="11" style="color: var(--danger); text-align:center; padding: 2rem;">Hata: ${result.message}</td></tr>`;
                 }
             })
             .catch(error => {
-                tableBody.innerHTML = `<tr><td colspan="10" style="color: var(--danger); text-align:center; padding: 2rem;">Bağlantı hatası: ${error}</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="11" style="color: var(--danger); text-align:center; padding: 2rem;">Bağlantı hatası: ${error}</td></tr>`;
             });
     }
 
-    // Process raw stock data and derive timeframe & target returns
+    // Process raw stock data and derive timeframe, risk & backtest stats
     function processStockData(data) {
         return data.map(item => {
             const signals = item.signals ? item.signals : '';
             const sigList = signals ? signals.split(', ').map(s => s.trim()) : [];
+            const details = item.signal_details || [];
             
             let timeframes = [];
-            let targetReturns = [];
             let timeframeKeys = [];
+            let actions = [];
+            let targetReturns = [];
+            let winRates = [];
+            let isConflict = item.is_conflict || false;
 
-            if (sigList.includes('Haftalık Al-Sat')) {
-                timeframeKeys.push('SHORT');
-                timeframes.push({ label: '⚡ Kısa Vade (1-7 Gün)', class: 'short' });
-                targetReturns.push('%2.5 - %5');
-            }
-            if (sigList.includes('Hacim Patlaması')) {
-                timeframeKeys.push('SHORT');
-                timeframes.push({ label: '⚡ Kısa Vade (1-7 Gün)', class: 'short' });
-                targetReturns.push('%3 - %7');
-            }
-            if (sigList.includes('Aylık Al-Sat')) {
-                timeframeKeys.push('MEDIUM');
-                timeframes.push({ label: '📈 Orta Vade (1-4 Hafta)', class: 'medium' });
-                targetReturns.push('%5 - %12');
-            }
-            if (sigList.includes('Değer Avcısı')) {
-                timeframeKeys.push('LONG');
-                timeframes.push({ label: '💎 Uzun Vade (Değer)', class: 'long' });
-                targetReturns.push('%15 - %30+');
-            }
-            if (sigList.includes('Temettü Kalesi')) {
-                timeframeKeys.push('LONG');
-                timeframes.push({ label: '💎 Uzun Vade (Temettü)', class: 'long' });
-                targetReturns.push('%10 - %25+');
+            if (Array.isArray(details) && details.length > 0) {
+                details.forEach(d => {
+                    const tfKey = d.timeframe_key || 'SHORT';
+                    timeframeKeys.push(tfKey);
+                    actions.push(d.action || 'BUY');
+                    if (d.win_rate) {
+                        winRates.push({
+                            name: d.name,
+                            win_rate: d.win_rate,
+                            avg_return: d.avg_return,
+                            excess_return: d.excess_return,
+                            is_validated: d.is_validated,
+                            sample_size: d.sample_size
+                        });
+                    }
+                    if (d.is_conflict) isConflict = true;
+                });
+            } else {
+                // Fallback to text parsing
+                if (sigList.includes('Haftalık Al-Sat') || sigList.includes('Hacim Patlaması')) {
+                    timeframeKeys.push('SHORT');
+                    actions.push('BUY');
+                }
+                if (sigList.includes('Aylık Al-Sat')) {
+                    timeframeKeys.push('MEDIUM');
+                    actions.push('BUY');
+                }
+                if (sigList.includes('Değer Avcısı') || sigList.includes('Temettü Kalesi')) {
+                    timeframeKeys.push('LONG');
+                    actions.push('BUY');
+                }
+                if (sigList.includes('Aşırı Alım / Risk')) {
+                    timeframeKeys.push('SHORT');
+                    actions.push('SELL');
+                }
+                if (sigList.includes('Trend Kırılımı (SAT)')) {
+                    timeframeKeys.push('MEDIUM');
+                    actions.push('SELL');
+                }
+                if (sigList.includes('Aşırı Değerleme (Uzak Dur)')) {
+                    timeframeKeys.push('LONG');
+                    actions.push('SELL');
+                }
             }
 
             timeframeKeys = [...new Set(timeframeKeys)];
+            const hasBuy = actions.includes('BUY');
+            const hasSell = actions.includes('SELL');
+            if (hasBuy && hasSell) isConflict = true;
+
+            const primaryAction = isConflict ? 'CONFLICT' : (hasSell ? 'SELL' : (hasBuy ? 'BUY' : 'NONE'));
 
             return {
                 ...item,
                 signalList: sigList,
-                timeframes: timeframes,
+                signalDetails: details,
                 timeframeKeys: timeframeKeys,
                 primaryTimeframe: timeframeKeys[0] || 'NONE',
-                targetReturnText: targetReturns.length > 0 ? targetReturns.join(' / ') : '-'
+                actions: actions,
+                primaryAction: primaryAction,
+                isConflict: isConflict,
+                winRates: winRates
             };
         });
     }
@@ -368,9 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Search Input
-    searchInput.addEventListener('input', () => {
-        applyFilterAndRender();
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            applyFilterAndRender();
+        });
+    }
 
     // Run Scan Button
     if (btnRunScan) {
@@ -403,6 +436,122 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Backtest Modal Elements & Handlers
+    const backtestModal = document.getElementById('backtestModal');
+    const btnOpenBacktestModal = document.getElementById('btnOpenBacktestModal');
+    const btnCloseBacktestModal = document.getElementById('btnCloseBacktestModal');
+    const backtestTableBody = document.getElementById('backtestTableBody');
+    const btnRerunBacktest = document.getElementById('btnRerunBacktest');
+
+    if (btnOpenBacktestModal && backtestModal) {
+        btnOpenBacktestModal.addEventListener('click', () => {
+            backtestModal.style.display = 'flex';
+            loadBacktestTable();
+        });
+    }
+
+    if (btnCloseBacktestModal && backtestModal) {
+        btnCloseBacktestModal.addEventListener('click', () => {
+            backtestModal.style.display = 'none';
+        });
+    }
+
+    // Modal dışına tıklayınca kapatma
+    window.addEventListener('click', (e) => {
+        if (e.target === backtestModal) {
+            backtestModal.style.display = 'none';
+        }
+    });
+
+    function loadBacktestTable() {
+        if (!backtestTableBody) return;
+        backtestTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">⏳ İstatistikler alınıyor...</td></tr>`;
+
+        fetch('/api/backtest/stats')
+            .then(res => res.json())
+            .then(result => {
+                if (result.status === 'success' && result.data) {
+                    renderBacktestModalTable(result.data);
+                } else {
+                    backtestTableBody.innerHTML = `<tr><td colspan="9" style="color: var(--danger); text-align: center;">Hata: ${result.message}</td></tr>`;
+                }
+            })
+            .catch(err => {
+                backtestTableBody.innerHTML = `<tr><td colspan="9" style="color: var(--danger); text-align: center;">Bağlantı hatası: ${err}</td></tr>`;
+            });
+    }
+
+    function renderBacktestModalTable(dataList) {
+        if (!backtestTableBody) return;
+        if (!dataList || dataList.length === 0) {
+            backtestTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 1.5rem;">Kayıtlı backtest istatistiği bulunamadı.</td></tr>`;
+            return;
+        }
+
+        backtestTableBody.innerHTML = dataList.map(item => {
+            const isBuy = !item.signal_type.includes('risk') && !item.signal_type.includes('kirilimi') && !item.signal_type.includes('pahali');
+            const dirBadge = isBuy 
+                ? `<span class="badge-buy">AL</span>` 
+                : `<span class="badge-sell">SAT / RİSK</span>`;
+            
+            const winColor = item.win_rate >= 60 ? '#34d399' : (item.win_rate >= 50 ? '#38bdf8' : '#fbbf24');
+            const retSign = item.avg_return >= 0 ? '+' : '';
+            const retColor = item.avg_return >= 0 ? '#34d399' : '#f43f5e';
+            const excessSign = item.excess_return >= 0 ? '+' : '';
+            const excessColor = item.excess_return >= 0 ? '#34d399' : '#f43f5e';
+
+            const oosBadge = item.is_validated 
+                ? `<span class="badge-oos-ok">✓ Onaylandı</span>` 
+                : `<span class="badge-oos-warn">⚠️ Sapma Var</span>`;
+
+            const tfLabel = item.timeframe_key === 'SHORT' ? 'Kısa (7G)' : (item.timeframe_key === 'MEDIUM' ? 'Orta (20G)' : 'Uzun (60G)');
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="font-weight: 600; color: #fff;">${item.signal_name}</td>
+                    <td>${dirBadge}</td>
+                    <td>${tfLabel}</td>
+                    <td style="font-weight: 600;">${item.sample_size}</td>
+                    <td style="color: ${winColor}; font-weight: 700;">%${item.win_rate.toFixed(1)}</td>
+                    <td style="color: ${retColor}; font-weight: 600;">${retSign}%${item.avg_return.toFixed(2)}</td>
+                    <td style="color: ${excessColor}; font-weight: 600;">${excessSign}%${item.excess_return.toFixed(2)}</td>
+                    <td style="color: #f43f5e;">%${item.max_loss.toFixed(1)}</td>
+                    <td>${oosBadge}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (btnRerunBacktest) {
+        btnRerunBacktest.addEventListener('click', () => {
+            btnRerunBacktest.disabled = true;
+            btnRerunBacktest.innerHTML = `<span>⏳</span> 5 Yıllık Veriler Hesaplanıyor...`;
+
+            fetch('/api/backtest/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ period: '5y' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('✓ 5 Yıllık Backtest ve Out-of-Sample doğrulama başarıyla tamamlandı!');
+                    loadBacktestTable();
+                    loadTableData();
+                } else {
+                    alert('Backtest hatası: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('Backtest çalıştırılırken hata: ' + err);
+            })
+            .finally(() => {
+                btnRerunBacktest.disabled = false;
+                btnRerunBacktest.innerHTML = `<span>🚀</span> Backtest'i Yeniden Hesapla`;
+            });
+        });
+    }
+
     // Sorting Logic
     const headers = document.querySelectorAll('th[data-sort]');
     headers.forEach(header => {
@@ -425,22 +574,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function applyFilterAndRender() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
+        const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
 
         // 1. Filter
         let filtered = processedData.filter(stock => {
-            let passTimeframe = true;
+            let passFilter = true;
             if (currentFilter === 'SHORT') {
-                passTimeframe = stock.timeframeKeys.includes('SHORT');
+                passFilter = stock.timeframeKeys.includes('SHORT');
             } else if (currentFilter === 'MEDIUM') {
-                passTimeframe = stock.timeframeKeys.includes('MEDIUM');
+                passFilter = stock.timeframeKeys.includes('MEDIUM');
             } else if (currentFilter === 'LONG') {
-                passTimeframe = stock.timeframeKeys.includes('LONG');
-            } else if (currentFilter === 'SIGNALS_ONLY') {
-                passTimeframe = stock.signalList.length > 0;
+                passFilter = stock.timeframeKeys.includes('LONG');
+            } else if (currentFilter === 'BUY_ONLY') {
+                passFilter = stock.primaryAction === 'BUY' || (stock.actions && stock.actions.includes('BUY'));
+            } else if (currentFilter === 'SELL_ONLY') {
+                passFilter = stock.primaryAction === 'SELL' || (stock.actions && stock.actions.includes('SELL'));
+            } else if (currentFilter === 'CONFLICT_ONLY') {
+                passFilter = stock.isConflict === true;
             }
 
-            if (!passTimeframe) return false;
+            if (!passFilter) return false;
 
             if (searchTerm) {
                 const sym = (stock.symbol || '').toLowerCase();
@@ -479,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" style="text-align:center; padding: 3rem; color: var(--text-secondary);">
+                    <td colspan="11" style="text-align:center; padding: 3rem; color: var(--text-secondary);">
                         🔍 Seçilen kriterlere uygun hisse veya sinyal bulunamadı.
                     </td>
                 </tr>
@@ -494,48 +647,77 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = stock.price ? `₺${stock.price.toFixed(2)}` : '-';
             const pb = stock.pb_ratio ? stock.pb_ratio.toFixed(2) : '-';
             const pe = stock.pe_ratio ? stock.pe_ratio.toFixed(2) : '-';
-            const div = stock.div_yield ? `%${stock.div_yield.toFixed(2)}` : '-';
 
             // RSI with color
             let rsiHtml = '-';
             if (stock.rsi) {
-                const rsiVal = stock.rsi.toFixed(2);
-                if (stock.rsi < 30) rsiHtml = `<span class="rsi-low">⚡ ${rsiVal} (Aşırı Satım)</span>`;
-                else if (stock.rsi > 70) rsiHtml = `<span class="rsi-high">🔥 ${rsiVal} (Aşırı Alım)</span>`;
+                const rsiVal = stock.rsi.toFixed(1);
+                if (stock.rsi < 30) rsiHtml = `<span class="rsi-low">⚡ ${rsiVal}</span>`;
+                else if (stock.rsi > 70) rsiHtml = `<span class="rsi-high">🔥 ${rsiVal}</span>`;
                 else rsiHtml = `<span>${rsiVal}</span>`;
             }
 
-            // Timeframe badge
+            // Vade & Yön Badge
             let tfHtml = '<span style="color: var(--text-secondary); font-size: 0.8rem;">-</span>';
-            if (stock.timeframes && stock.timeframes.length > 0) {
-                const uniqueTf = [];
-                const seen = new Set();
-                for (const tf of stock.timeframes) {
-                    if (!seen.has(tf.label)) {
-                        seen.add(tf.label);
-                        uniqueTf.push(tf);
-                    }
-                }
-                tfHtml = uniqueTf.map(tf => `<span class="timeframe-badge ${tf.class}">${tf.label}</span>`).join(' ');
+            if (stock.isConflict) {
+                tfHtml = `<span class="badge-conflict">⚠️ ÇELİŞKİ</span>`;
+            } else if (stock.timeframeKeys && stock.timeframeKeys.length > 0) {
+                const tfBadges = stock.timeframeKeys.map(tf => {
+                    const cls = tf === 'SHORT' ? 'short' : (tf === 'MEDIUM' ? 'medium' : 'long');
+                    const label = tf === 'SHORT' ? 'Kısa (1-7G)' : (tf === 'MEDIUM' ? 'Orta (1-4H)' : 'Uzun (Değer)');
+                    return `<span class="timeframe-badge ${cls}">${label}</span>`;
+                });
+                tfHtml = tfBadges.join(' ');
             }
 
-            // Signals badge
+            // Sinyal Rozetleri (AL / SAT / Çakışma)
             let signalsHtml = '<span style="color: var(--text-secondary); font-size: 0.8rem;">Sinyal Yok</span>';
             if (stock.signalList && stock.signalList.length > 0) {
                 signalsHtml = stock.signalList.map(sig => {
-                    if (sig === 'Değer Avcısı') return `<span class="signal-badge">${sig}</span>`;
-                    if (sig === 'Hacim Patlaması') return `<span class="signal-badge warning">${sig}</span>`;
-                    if (sig === 'Haftalık Al-Sat') return `<span class="signal-badge warning">${sig}</span>`;
-                    if (sig === 'Aylık Al-Sat') return `<span class="signal-badge info">${sig}</span>`;
-                    if (sig === 'Temettü Kalesi') return `<span class="signal-badge purple">${sig}</span>`;
-                    return `<span class="signal-badge">${sig}</span>`;
+                    if (sig.includes('Aşırı Alım') || sig.includes('Trend Kırılımı') || sig.includes('Aşırı Değerleme')) {
+                        return `<span class="badge-sell" style="margin-right: 4px; display: inline-block; margin-bottom: 2px;">🔴 ${sig}</span>`;
+                    } else if (stock.isConflict) {
+                        return `<span class="badge-conflict" style="margin-right: 4px; display: inline-block; margin-bottom: 2px;">${sig}</span>`;
+                    } else {
+                        return `<span class="badge-buy" style="margin-right: 4px; display: inline-block; margin-bottom: 2px;">🟢 ${sig}</span>`;
+                    }
                 }).join('');
             }
 
-            // Target return
-            let targetHtml = '-';
-            if (stock.targetReturnText && stock.targetReturnText !== '-') {
-                targetHtml = `<span class="target-badge">${stock.targetReturnText}</span>`;
+            // Ölçülen Başarı (Gerçek Backtest İstatistiği)
+            let backtestHtml = '<span style="color: var(--text-secondary); font-size: 0.8rem;">-</span>';
+            if (stock.winRates && stock.winRates.length > 0) {
+                backtestHtml = stock.winRates.map(w => {
+                    const retSign = w.avg_return >= 0 ? '+' : '';
+                    const sampleWarn = w.sample_size < 30 ? '<span title="N<30 Düşük Örneklem" style="color: #fbbf24;"> ⚠️</span>' : '';
+                    return `
+                        <div class="stat-win-badge" title="Tetiklenme: ${w.sample_size} işlem | XU100 Farkı: ${w.excess_return >= 0 ? '+' : ''}%${w.excess_return}%">
+                            Kazanma: %${w.win_rate.toFixed(0)} (Ort: ${retSign}%${w.avg_return.toFixed(1)})${sampleWarn}
+                        </div>
+                    `;
+                }).join('<br>');
+            }
+
+            // Stop-Loss & ATR
+            let stopLossHtml = '<span style="color: var(--text-secondary); font-size: 0.8rem;">-</span>';
+            if (stock.stop_loss) {
+                const atrStr = stock.atr ? `(ATR: ₺${stock.atr.toFixed(2)})` : '';
+                stopLossHtml = `
+                    <div style="font-size: 0.8rem; font-weight: 600; color: #f43f5e;">
+                        ₺${stock.stop_loss.toFixed(2)}
+                        <span style="font-size: 0.7rem; color: var(--text-secondary); display: block; font-weight: 400;">${atrStr}</span>
+                    </div>
+                `;
+            }
+
+            // Risk & Volatilite
+            let riskHtml = '-';
+            if (stock.volatility) {
+                const rLevel = stock.risk_level || (stock.volatility < 35 ? 'Düşük Risk' : (stock.volatility <= 55 ? 'Orta Risk' : 'Yüksek Risk'));
+                const rClass = stock.volatility < 35 ? 'low' : (stock.volatility <= 55 ? 'medium' : 'high');
+                riskHtml = `
+                    <span class="risk-tag ${rClass}">%${stock.volatility.toFixed(1)} (${rLevel})</span>
+                `;
             }
 
             // Actions
@@ -556,11 +738,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="font-weight: 600;">${price}</td>
                 <td>${tfHtml}</td>
                 <td>${signalsHtml}</td>
-                <td>${targetHtml}</td>
+                <td>${backtestHtml}</td>
+                <td>${stopLossHtml}</td>
+                <td>${riskHtml}</td>
                 <td>${rsiHtml}</td>
                 <td>${pb}</td>
                 <td>${pe}</td>
-                <td>${div}</td>
                 <td>${actionsHtml}</td>
             `;
 
@@ -568,4 +751,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
 

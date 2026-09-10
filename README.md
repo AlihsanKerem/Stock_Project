@@ -11,23 +11,27 @@ BIST (Borsa İstanbul) hisse senetleri için geliştirilmiş; teknik analiz ve t
 - **Canlı KPI Sayaçları:** Toplam Portföy Varlığı, Canlı K/Z (₺ ve %), Bu Ayın Gerçekleşen Kârı, Günün Sinyalleri ve Aktif Alarmlar.
 - **Aylık Kazanç Hedefi İlerlemesi:** Belirlediğiniz aylık TL kâr hedefine göre dinamik dolan renkli ilerleme çubuğu.
 
-### 2. ⚡ Vade Bazlı Sinyal Tarayıcısı (`analyzer.py`)
-Teknik ve temel analiz indikatörleri 3 temel yatırım vadesine ayrılmıştır:
-- **⚡ Kısa Vade (1 - 7 Gün):** Haftalık Al-Sat (SMA5 > SMA20 kesişimi), Hacim Patlaması & Dönüş (Hedef: %2.5 - %7)
-- **📈 Orta Vade (1 - 4 Hafta):** Aylık Al-Sat (SMA20 > SMA50 kesişimi, Hedef: %5 - %12)
-- **💎 Uzun Vade / Değer:** Değer Avcısı (PD/DD <= 1 & RSI < 30, Hedef: %15 - %30+), Temettü Kalesi (Temettü > %5 & F/K < 15, Hedef: %10 - %25+)
-- **Geçmiş Sinyal Günlüğü:** Üretilen tüm sinyaller tarih ve fiyat damgasıyla `signal_history` tablosuna kaydedilir.
+### 2. 📈 İstatistiksel Backtest & Doğrulama Motoru (`backtester.py`)
+- **5 Yıllık BIST Tarihsel Simülasyonu:** Her sinyal tipinin (`deger_avcisi`, `hacim_onayi`, `temettu_kalesi`, `al_sat_haftalik`, `al_sat_aylik`, `asiri_alim_risk`, `trend_kirilimi`, `pahali_hisse`) geçmiş 5 yıllık periyottaki gerçek performansı test edilir.
+- **Out-of-Sample (Örneklem Dışı) Doğrulama:** Veri %75 Train ve %25 Test olarak bölünür. Test setinde başarısı sürmeyen sinyaller güvenilmez olarak işaretlenir (overfitting engeli).
+- **Gerçek İstatistikler:** Tahmini hedef getiri metinleri yerine ölçülmüş **İşlem Sayısı (N)**, **Kazanma Oranı (%)**, **Ortalama Getiri (%)**, **BIST100 Endeks Farkı (Alfa)** ve **Max Kayıp** gösterilir.
+- **Simetrik SAT & Kaçın Sinyalleri:** Aşırı Alım / Düzeltme Riski, Trend Kırılımı (Stop) ve Aşırı Değerleme (Uzak Dur) sinyalleri.
+- **Sinyal Çakışması Yönetimi:** Aynı hissede hem AL hem SAT/RİSK sinyali tetiklendiğinde kullanıcıya sarı "⚠️ ÇELİŞKİ" uyarısı verilir.
 
-### 3. 💼 Akıllı Portföy & Gerçekleşen K/Z Modülü
+### 3. 🛡️ Dinamik Risk Yönetimi & ATR Bazlı Stop-Loss
+- **20 Günlük Gerçek Volatilite:** Hisse fiyat hareketlerinin standart sapmasından hesaplanan dinamik risk seviyesi (Düşük, Orta, Yüksek).
+- **ATR Bazlı Stop-Loss Önerisi:** Güncel piyasa oynaklığına (ATR-14) göre her hisse için dinamik Stop-Loss seviyesi ($Fiyat - 2 \times ATR$).
+
+### 4. 💼 Akıllı Portföy & Gerçekleşen K/Z Modülü
 - Otomatik güncel piyasa fiyatı çekme desteği (`⚡ Güncel Fiyattan Al`).
 - Kısmi veya tam satış desteği ile **Gerçekleşen K/Z (Realized PnL)** kaydı ve işlem geçmişi.
 
-### 4. 🔔 Kullanıcı Tanımlı Oran Bazlı Bildirim & Telegram Botu
+### 5. 🔔 Kullanıcı Tanımlı Oran Bazlı Bildirim & Telegram Botu
 - "THYAO alış fiyatımdan %5 artarsa" veya "EREGL 45.00 ₺ altına düşerse" şeklinde oran/fiyat bazlı alarmlar.
 - `bot_main.py` 5 dakikada bir fiyatları kontrol eder, hedef gerçekleştiğinde Telegram üzerinden anında bildirim iletir.
 - Spam koruması ile tetiklenen alarmlar otomatik olarak `TRIGGERED` durumuna geçer.
 
-### 5. 💾 Otomatik Veritabanı Yedekleme (`backup_db.py`)
+### 6. 💾 Otomatik Veritabanı Yedekleme (`backup_db.py`)
 - SQLite Online Backup API ile veritabanı aktifken dahi bozulmadan `backups/` klasörüne zaman damgalı yedekleme.
 - Otomatik rotasyon: En güncel 10 yedek saklanır, eski yedekler disk doldurmamak için otomatik temizlenir.
 

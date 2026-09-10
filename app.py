@@ -5,17 +5,21 @@ from database import (
     delete_portfolio_position, update_portfolio_position,
     record_sale, get_transactions, delete_transaction, get_monthly_target_stats,
     get_setting, set_setting, add_alert, get_all_alerts, get_active_alerts, delete_alert,
-    save_signals, get_signals, clear_signal_history
+    save_signals, get_signals, clear_signal_history,
+    save_backtest_results, get_backtest_results, get_signal_backtest_map
 )
 from analyzer import analyze_stock, run_analysis, BIST_SYMBOLS
+from backtester import run_full_backtest, seed_baseline_stats_if_empty, get_signal_stats
 from sentiment import analyze_sentiment
 import os
+import json
 import yfinance as yf
 
 app = Flask(__name__)
 
 # Veritabanını hazırla
 init_db()
+seed_baseline_stats_if_empty()
 
 @app.route('/')
 def index():
@@ -105,8 +109,9 @@ def api_dashboard_summary():
         med_count = len([s for s in recent_signals if s.get('timeframe_key') == 'MEDIUM'])
         long_count = len([s for s in recent_signals if s.get('timeframe_key') == 'LONG'])
 
-        # 5. Hisse Sayısı
+        # 5. Hisse Sayısı & Backtest Özeti
         stocks = get_all_stock_data()
+        backtest_stats = get_backtest_results()
 
         return jsonify({
             "status": "success",
@@ -124,7 +129,8 @@ def api_dashboard_summary():
                     "long_count": long_count,
                     "items": recent_signals
                 },
-                "stock_count": len(stocks)
+                "stock_count": len(stocks),
+                "backtest_count": len(backtest_stats)
             }
         })
     except Exception as e:
@@ -134,7 +140,45 @@ def api_dashboard_summary():
 def api_data():
     try:
         data = get_all_stock_data()
+        # Parse signal_details JSON string if needed
+        for row in data:
+            sig_det = row.get('signal_details')
+            if sig_det and isinstance(sig_det, str):
+                try:
+                    row['signal_details'] = json.loads(sig_det)
+                except Exception:
+                    pass
         return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+# ==================== BACKTEST API ENDPOINTS ====================
+
+@app.route('/api/backtest/stats')
+def api_get_backtest_stats():
+    try:
+        results = get_backtest_results()
+        if not results:
+            seed_baseline_stats_if_empty()
+            results = get_backtest_results()
+        return jsonify({"status": "success", "data": results})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/api/backtest/run', methods=['POST'])
+def api_run_backtest():
+    try:
+        data = request.json or {}
+        period = data.get('period', '5y')
+        symbols = data.get('symbols') or BIST_SYMBOLS
+        
+        # Backtest'i çalıştır
+        results = run_full_backtest(symbols=symbols, period=period)
+        return jsonify({
+            "status": "success",
+            "message": f"{len(symbols)} hisse için {period} süreli backtest başarıyla tamamlandı.",
+            "data": results
+        })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
@@ -154,10 +198,9 @@ def api_get_signals():
 def api_trigger_scan():
     try:
         data = request.json or {}
-        # İsteğe bağlı olarak sembol listesi verilebilir veya varsayılan BIST_SYMBOLS taranır
         symbols = data.get('symbols')
         if not symbols:
-            symbols = BIST_SYMBOLS[:15] # Hızlı tarama için ilk 15 veya tamamı
+            symbols = BIST_SYMBOLS[:20] # Varsayılan ilk 20 hisse veya tamamı
             
         found_signals = []
         raw_list = []
@@ -177,7 +220,7 @@ def api_trigger_scan():
             
         return jsonify({
             "status": "success",
-            "message": f"{len(symbols)} hisse tarandı. {len(found_signals)} yeni sinyal bulundu.",
+            "message": f"{len(symbols)} hisse tarandı. {len(found_signals)} adet doğrulanmış sinyal bulundu.",
             "scanned_count": len(symbols),
             "signals_found": len(found_signals)
         })

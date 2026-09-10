@@ -18,7 +18,12 @@ def init_db():
             pb_ratio REAL,
             pe_ratio REAL,
             div_yield REAL,
+            volatility REAL,
+            atr REAL,
+            stop_loss REAL,
+            risk_level TEXT,
             signals TEXT,
+            signal_details TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -93,25 +98,94 @@ def init_db():
             target_return TEXT,
             risk_level TEXT,
             rsi REAL,
+            volatility REAL,
+            atr REAL,
+            stop_loss REAL,
+            action TEXT DEFAULT 'BUY',
+            is_conflict INTEGER DEFAULT 0,
+            is_validated INTEGER DEFAULT 1,
+            sample_size INTEGER,
+            win_rate REAL,
+            avg_return REAL,
             message TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS backtest_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            signal_type TEXT UNIQUE NOT NULL,
+            signal_name TEXT NOT NULL,
+            timeframe_key TEXT NOT NULL,
+            horizon_days INTEGER NOT NULL,
+            sample_size INTEGER NOT NULL,
+            win_rate REAL NOT NULL,
+            avg_return REAL NOT NULL,
+            median_return REAL NOT NULL,
+            max_loss REAL NOT NULL,
+            std_dev REAL NOT NULL,
+            benchmark_return REAL NOT NULL,
+            excess_return REAL NOT NULL,
+            train_win_rate REAL,
+            test_win_rate REAL,
+            train_avg_return REAL,
+            test_avg_return REAL,
+            is_validated INTEGER DEFAULT 1,
+            notes TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Migration: Add columns to existing tables if missing
+    migration_columns = [
+        ('stock_data', 'volatility', 'REAL'),
+        ('stock_data', 'atr', 'REAL'),
+        ('stock_data', 'stop_loss', 'REAL'),
+        ('stock_data', 'risk_level', 'TEXT'),
+        ('stock_data', 'signal_details', 'TEXT'),
+        ('signal_history', 'volatility', 'REAL'),
+        ('signal_history', 'atr', 'REAL'),
+        ('signal_history', 'stop_loss', 'REAL'),
+        ('signal_history', 'action', "TEXT DEFAULT 'BUY'"),
+        ('signal_history', 'is_conflict', 'INTEGER DEFAULT 0'),
+        ('signal_history', 'is_validated', 'INTEGER DEFAULT 1'),
+        ('signal_history', 'sample_size', 'INTEGER'),
+        ('signal_history', 'win_rate', 'REAL'),
+        ('signal_history', 'avg_return', 'REAL')
+    ]
+    
+    for table, col, col_type in migration_columns:
+        try:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError:
+            pass # Column already exists
+
     conn.commit()
     conn.close()
 
 def save_stock_data(data_list):
     """
     data_list: list of dicts. 
-    Each dict should have: symbol, price, rsi, volume, pb_ratio, pe_ratio, div_yield, signals (comma separated string)
+    Each dict should have: symbol, price, rsi, volume, pb_ratio, pe_ratio, div_yield, volatility, atr, stop_loss, risk_level, signals, signal_details
     """
+    import json
     conn = get_connection()
     cursor = conn.cursor()
     
     for item in data_list:
+        sig_details = item.get('signal_details')
+        if isinstance(sig_details, (list, dict)):
+            sig_details_str = json.dumps(sig_details, ensure_ascii=False)
+        else:
+            sig_details_str = str(sig_details or '')
+
         cursor.execute('''
-            INSERT INTO stock_data (symbol, price, rsi, volume, pb_ratio, pe_ratio, div_yield, signals, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO stock_data (
+                symbol, price, rsi, volume, pb_ratio, pe_ratio, div_yield, 
+                volatility, atr, stop_loss, risk_level, signals, signal_details, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(symbol) DO UPDATE SET
                 price=excluded.price,
                 rsi=excluded.rsi,
@@ -119,7 +193,12 @@ def save_stock_data(data_list):
                 pb_ratio=excluded.pb_ratio,
                 pe_ratio=excluded.pe_ratio,
                 div_yield=excluded.div_yield,
+                volatility=excluded.volatility,
+                atr=excluded.atr,
+                stop_loss=excluded.stop_loss,
+                risk_level=excluded.risk_level,
                 signals=excluded.signals,
+                signal_details=excluded.signal_details,
                 updated_at=CURRENT_TIMESTAMP
         ''', (
             item.get('symbol'),
@@ -129,7 +208,12 @@ def save_stock_data(data_list):
             item.get('pb_ratio'),
             item.get('pe_ratio'),
             item.get('div_yield'),
-            item.get('signals', '')
+            item.get('volatility'),
+            item.get('atr'),
+            item.get('stop_loss'),
+            item.get('risk_level', 'Orta'),
+            item.get('signals', ''),
+            sig_details_str
         ))
     
     conn.commit()
@@ -527,7 +611,7 @@ def delete_alert(alert_id):
 def save_signals(signals_list):
     """
     Tarama sonucu üretilen sinyalleri signal_history tablosuna kaydeder.
-    signals_list: list of dicts (symbol, type, name, timeframe_key, timeframe_label, price_at_signal, target_return, risk_level, rsi, message)
+    signals_list: list of dicts (symbol, type, name, timeframe_key, timeframe_label, price_at_signal, target_return, risk_level, rsi, volatility, atr, stop_loss, action, is_conflict, is_validated, sample_size, win_rate, avg_return, message)
     """
     if not signals_list:
         return
@@ -541,9 +625,10 @@ def save_signals(signals_list):
             INSERT INTO signal_history (
                 symbol, signal_type, signal_name, timeframe_key, 
                 timeframe_label, price_at_signal, target_return, 
-                risk_level, rsi, message
+                risk_level, rsi, volatility, atr, stop_loss, action,
+                is_conflict, is_validated, sample_size, win_rate, avg_return, message
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             symbol,
             sig.get('type', ''),
@@ -554,6 +639,15 @@ def save_signals(signals_list):
             sig.get('target_return', ''),
             sig.get('risk_level', 'Orta'),
             sig.get('rsi'),
+            sig.get('volatility'),
+            sig.get('atr'),
+            sig.get('stop_loss'),
+            sig.get('action', 'BUY'),
+            1 if sig.get('is_conflict') else 0,
+            1 if sig.get('is_validated', True) else 0,
+            sig.get('sample_size'),
+            sig.get('win_rate'),
+            sig.get('avg_return'),
             sig.get('message', '')
         ))
         
@@ -596,6 +690,101 @@ def clear_signal_history():
     cursor.execute("DELETE FROM signal_history")
     conn.commit()
     conn.close()
+
+# ==================== BACKTEST RESULTS OPERATIONS ====================
+
+def save_backtest_results(results_list):
+    """
+    Backtest sonuçlarını kaydeder veya günceller.
+    results_list: list of dicts with keys:
+    signal_type, signal_name, timeframe_key, horizon_days, sample_size, win_rate,
+    avg_return, median_return, max_loss, std_dev, benchmark_return, excess_return,
+    train_win_rate, test_win_rate, train_avg_return, test_avg_return, is_validated, notes
+    """
+    if not results_list:
+        return
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    for r in results_list:
+        cursor.execute('''
+            INSERT INTO backtest_results (
+                signal_type, signal_name, timeframe_key, horizon_days,
+                sample_size, win_rate, avg_return, median_return, max_loss,
+                std_dev, benchmark_return, excess_return, train_win_rate,
+                test_win_rate, train_avg_return, test_avg_return, is_validated,
+                notes, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(signal_type) DO UPDATE SET
+                signal_name=excluded.signal_name,
+                timeframe_key=excluded.timeframe_key,
+                horizon_days=excluded.horizon_days,
+                sample_size=excluded.sample_size,
+                win_rate=excluded.win_rate,
+                avg_return=excluded.avg_return,
+                median_return=excluded.median_return,
+                max_loss=excluded.max_loss,
+                std_dev=excluded.std_dev,
+                benchmark_return=excluded.benchmark_return,
+                excess_return=excluded.excess_return,
+                train_win_rate=excluded.train_win_rate,
+                test_win_rate=excluded.test_win_rate,
+                train_avg_return=excluded.train_avg_return,
+                test_avg_return=excluded.test_avg_return,
+                is_validated=excluded.is_validated,
+                notes=excluded.notes,
+                updated_at=CURRENT_TIMESTAMP
+        ''', (
+            r.get('signal_type'),
+            r.get('signal_name'),
+            r.get('timeframe_key'),
+            r.get('horizon_days', 7),
+            r.get('sample_size', 0),
+            r.get('win_rate', 0.0),
+            r.get('avg_return', 0.0),
+            r.get('median_return', 0.0),
+            r.get('max_loss', 0.0),
+            r.get('std_dev', 0.0),
+            r.get('benchmark_return', 0.0),
+            r.get('excess_return', 0.0),
+            r.get('train_win_rate'),
+            r.get('test_win_rate'),
+            r.get('train_avg_return'),
+            r.get('test_avg_return'),
+            1 if r.get('is_validated', True) else 0,
+            r.get('notes', '')
+        ))
+        
+    conn.commit()
+    conn.close()
+
+def get_backtest_results(signal_type=None):
+    """
+    Kaydedilmiş backtest istatistiklerini getirir.
+    """
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    if signal_type:
+        cursor.execute("SELECT * FROM backtest_results WHERE signal_type = ?", (signal_type,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+    else:
+        cursor.execute("SELECT * FROM backtest_results ORDER BY win_rate DESC, sample_size DESC")
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+def get_signal_backtest_map():
+    """
+    signal_type -> dict formatında hızlı arama haritası döner.
+    """
+    results = get_backtest_results()
+    return {r['signal_type']: r for r in results}
 
 # Initialize db when this file is imported
 init_db()
