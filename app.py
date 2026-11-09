@@ -6,11 +6,13 @@ from database import (
     record_sale, get_transactions, delete_transaction, get_monthly_target_stats,
     get_setting, set_setting, add_alert, get_all_alerts, get_active_alerts, delete_alert,
     save_signals, get_signals, clear_signal_history,
-    save_backtest_results, get_backtest_results, get_signal_backtest_map
+    save_backtest_results, get_backtest_results, get_signal_backtest_map,
+    get_agent_chat_history, clear_agent_history, get_agent_profile, set_agent_profile
 )
 from analyzer import analyze_stock, run_analysis, BIST_SYMBOLS
 from backtester import run_full_backtest, get_signal_stats
 from sentiment import analyze_sentiment
+from agent_engine import stock_agent
 import os
 import json
 import yfinance as yf
@@ -661,6 +663,82 @@ def api_delete_alert():
         return jsonify({"status": "success", "message": "Alarm başarıyla silindi/iptal edildi."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
+
+# ==========================================
+# 🤖 AI Agent API Endpoint'leri
+# ==========================================
+
+@app.route('/api/agent/chat', methods=['POST'])
+def api_agent_chat():
+    """
+    Kullanıcı mesajını alır, otonom ajana (ReAct döngüsüne) iletir
+    ve adımlarla birlikte yanıt döner.
+    """
+    try:
+        data = request.json or {}
+        message = data.get('message', '').strip()
+        session_id = data.get('session_id', 'web_user')
+        
+        if not message:
+            return jsonify({"status": "error", "message": "Boş mesaj gönderilemez."}), 400
+
+        result = stock_agent.ask(message, session_id=session_id)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Ajan hatası: {str(e)}"}), 500
+
+@app.route('/api/agent/history')
+def api_agent_history():
+    """
+    Mevcut oturuma ait sohbet geçmişini döner.
+    """
+    try:
+        session_id = request.args.get('session_id', 'web_user')
+        limit = int(request.args.get('limit', 20))
+        history = get_agent_chat_history(session_id, limit=limit)
+        return jsonify({"status": "success", "history": history})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/agent/clear', methods=['POST'])
+def api_agent_clear():
+    """
+    Sohbet geçmişini sıfırlar.
+    """
+    try:
+        data = request.json or {}
+        session_id = data.get('session_id', 'web_user')
+        clear_agent_history(session_id)
+        return jsonify({"status": "success", "message": "Sohbet geçmişi temizlendi."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/agent/briefing')
+def api_agent_briefing():
+    """
+    Portföy ve piyasa için tek tıkla Yönetici Strateji Bülteni üretir.
+    """
+    try:
+        briefing = stock_agent.generate_executive_briefing()
+        return jsonify(briefing)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/agent/profile', methods=['GET', 'POST'])
+def api_agent_profile():
+    """
+    Ajanın kullanıcı tercihlerini (risk düzeyi, vade vb.) getirir veya günceller.
+    """
+    try:
+        if request.method == 'POST':
+            data = request.json or {}
+            for k, v in data.items():
+                set_agent_profile(k, str(v))
+            return jsonify({"status": "success", "message": "Ajan tercihleri güncellendi.", "profile": get_agent_profile()})
+        else:
+            return jsonify({"status": "success", "profile": get_agent_profile()})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     # Flask sunucusunu başlat

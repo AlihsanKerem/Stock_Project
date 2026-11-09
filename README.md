@@ -35,6 +35,12 @@ BIST (Borsa İstanbul) hisse senetleri için geliştirilmiş; teknik analiz ve t
 - SQLite Online Backup API ile veritabanı aktifken dahi bozulmadan `backups/` klasörüne zaman damgalı yedekleme.
 - Otomatik rotasyon: En güncel 10 yedek saklanır, eski yedekler disk doldurmamak için otomatik temizlenir.
 
+### 7. 🤖 Otonom BIST AI Portföy & Karar Destek Ajanı (`agent_engine.py`)
+- **ReAct Bilişsel Döngüsü:** Teknik analiz, 5 yıllık backtest başarıları, ATR Stop-Loss riskleri, haber duygu analizi ve portföy durumunu tek bir potada sentezler.
+- **Pluggable (Tak-Çıkar) LLM Desteği:** Tek bir `.env` ayarı ile **Gemini**, **Lokal Modeller (Ollama / LM Studio)** veya **OpenAI-Uyumlu Harici API'ler (DeepSeek, Groq vb.)** arasında geçiş imkanı.
+- **Web Dashboard & Telegram Çift Yönlü Sohbet:** Hem web arayüzündeki kayar panelle hem de Telegram üzerinden doğrudan doğal dille interaktif analiz ve anlık "Yönetici Strateji Bülteni" alma.
+- **Hafıza & Profilleme:** Kullanıcının risk toleransını hatırlar, geçmiş konuşmaları SQLite üzerinde oturum bazlı saklar.
+
 ---
 
 ## 🛠️ Kurulum ve Başlatma

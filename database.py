@@ -173,6 +173,26 @@ def init_db():
         except sqlite3.OperationalError:
             pass # Column already exists
 
+    # AI Agent Tabloları (Hafıza ve Tercihler)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS agent_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            tool_calls TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_agent_profile (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -811,6 +831,103 @@ def get_signal_backtest_map():
     """
     results = get_backtest_results()
     return {r['signal_type']: r for r in results}
+
+# ==========================================
+# 🤖 AI Agent Hafıza & Tercih Fonksiyonları
+# ==========================================
+
+def save_agent_message(session_id, role, content, tool_calls=None):
+    """
+    AI Ajanı ile kullanıcı arasındaki mesajı veritabanına kaydeder.
+    """
+    import json
+    conn = get_connection()
+    cursor = conn.cursor()
+    tool_calls_str = json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None
+    cursor.execute('''
+        INSERT INTO agent_messages (session_id, role, content, tool_calls)
+        VALUES (?, ?, ?, ?)
+    ''', (session_id, role, content, tool_calls_str))
+    conn.commit()
+    conn.close()
+
+def get_agent_chat_history(session_id, limit=20):
+    """
+    Belirli bir oturuma ait son mesajları kronolojik sırayla döner.
+    """
+    import json
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, session_id, role, content, tool_calls, created_at
+        FROM agent_messages
+        WHERE session_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+    ''', (session_id, limit))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # Kronolojik sıra (eskiden yeniye)
+    history = []
+    for r in reversed(rows):
+        item = dict(r)
+        if item.get('tool_calls'):
+            try:
+                item['tool_calls'] = json.loads(item['tool_calls'])
+            except Exception:
+                pass
+        history.append(item)
+    return history
+
+def clear_agent_history(session_id=None):
+    """
+    Belirli bir oturumun veya tüm oturumların sohbet geçmişini temizler.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    if session_id:
+        cursor.execute("DELETE FROM agent_messages WHERE session_id = ?", (session_id,))
+    else:
+        cursor.execute("DELETE FROM agent_messages")
+    conn.commit()
+    conn.close()
+
+def set_agent_profile(key, value):
+    """
+    Kullanıcının ajana dair tercihlerini (ör. risk_level, favorite_sectors) kaydeder.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO user_agent_profile (key, value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    ''', (str(key), str(value)))
+    conn.commit()
+    conn.close()
+
+def get_agent_profile():
+    """
+    Kullanıcının kayıtlı tüm tercihlerini sözlük olarak döner.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM user_agent_profile")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # Varsayılanlar
+    profile = {
+        "risk_level": "Dengeli",
+        "horizon": "Orta Vade",
+        "stop_loss_discipline": "Katı",
+        "favorite_sectors": "BIST30 / Sanayi / Bankacılık"
+    }
+    for k, v in rows:
+        profile[k] = v
+    return profile
 
 # Initialize db when this file is imported
 init_db()

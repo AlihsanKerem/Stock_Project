@@ -25,6 +25,7 @@
                 <a href="/portfolio" class="nav-link">💼 Portföy</a>
                 <a href="/hisse-analiz" class="nav-link">🎯 Tekli Hisse</a>
                 <a href="/takip" class="nav-link">👀 Takip & 🔔 Alarmlar</a>
+                <a href="javascript:void(0)" class="nav-link" id="navAgentLink" onclick="document.getElementById('agentFloatBtn').click()">🤖 AI Asistan</a>
             </nav>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Hisse veya Sinyal Ara (Örn: THYAO)...">
@@ -297,6 +298,52 @@
         </footer>
     </div>
 
+    <!-- 🤖 AI Agent Floating Button -->
+    <button class="agent-floating-btn" id="agentFloatBtn" title="BIST AI Portföy Asistanı ile Sohbet Edin">
+        <span>🤖</span>
+        <span>AI Portföy Asistanı</span>
+    </button>
+
+    <!-- 🤖 AI Agent Slide-Over Drawer -->
+    <div class="agent-drawer" id="agentDrawer">
+        <div class="agent-header">
+            <div class="agent-header-title">
+                <span>🤖</span>
+                <div>
+                    <h3>BIST Portföy Asistanı</h3>
+                    <span class="agent-badge">ReAct Engine Active</span>
+                </div>
+            </div>
+            <div class="agent-header-actions">
+                <button class="agent-icon-btn" id="agentBriefingBtn" title="Yönetici Strateji Bülteni Oluştur">📑</button>
+                <button class="agent-icon-btn" id="agentClearBtn" title="Sohbeti Temizle">🗑️</button>
+                <button class="agent-icon-btn" id="agentCloseBtn" title="Kapat">✕</button>
+            </div>
+        </div>
+
+        <!-- Hızlı Aksiyon Çipleri -->
+        <div class="agent-quick-chips">
+            <button class="agent-chip" data-prompt="Portföyümün güncel kâr/zarar durumunu ve risklerini analiz et.">📊 Portföy Analizi</button>
+            <button class="agent-chip" data-prompt="Bugün gelen en güçlü AL sinyalleri hangileri? Güvenilirlikleri nasıl?">🚀 Günün Sinyalleri</button>
+            <button class="agent-chip" data-prompt="Açık hisselerimin güncel ATR bazlı Stop-Loss seviyelerini kontrol et.">🛡️ Stop-Loss Kontrolü</button>
+            <button class="agent-chip" data-prompt="Bana kapsamlı bir günlük Yönetici Strateji Özeti hazırla.">📑 Strateji Bülteni</button>
+        </div>
+
+        <!-- Sohbet Akışı -->
+        <div class="agent-chat-body" id="agentChatBody">
+            <!-- JS ile dinamik doldurulur -->
+        </div>
+
+        <!-- Mesaj Giriş Alanı -->
+        <div class="agent-input-container">
+            <input type="text" id="agentChatInput" class="agent-input" placeholder="Hisse veya portföy sorusu yazın..." autocomplete="off">
+            <button id="agentSendBtn" class="agent-send-btn">
+                <span>Gönder</span>
+            </button>
+        </div>
+    </div>
+
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/agent.js"></script>
 </body>
 </html>
