@@ -740,6 +740,33 @@ def api_agent_profile():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/agent/committee/<symbol>')
+def api_agent_committee(symbol):
+    """
+    BIST hissesi için 4 uzman ajanın (virattt/ai-hedge-fund) yatırım komitesi değerlendirmesini döner.
+    """
+    try:
+        from committee_engine import BistInvestmentCommittee
+        committee = BistInvestmentCommittee()
+        report = committee.evaluate_stock(symbol)
+        return jsonify({"status": "success", "data": report})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/agent/timemachine/<symbol>')
+def api_agent_timemachine(symbol):
+    """
+    BIST hissesi için Time Machine (jakeschincariol/day-trader-skill) replay simülasyonunu döner.
+    """
+    try:
+        target_pct = float(request.args.get('target', 4.0))
+        stop_pct = float(request.args.get('stop', 2.5))
+        from day_trader_engine import run_time_machine_simulation
+        res = run_time_machine_simulation(symbol, target_pct=target_pct, stop_pct=stop_pct)
+        return jsonify({"status": "success", "data": res})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     # Flask sunucusunu başlat
     app.run(debug=True, host='0.0.0.0', port=5000)

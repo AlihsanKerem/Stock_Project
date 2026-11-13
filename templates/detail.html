@@ -80,6 +80,103 @@
                         </div>
                     </div>
 
+                    <!-- 🏛️ BIST Yatırım Komitesi Bölümü (virattt/ai-hedge-fund) -->
+                    <div id="committeeSection" style="margin-bottom: 2.5rem; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 1.75rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.35rem; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+                                    🏛️ BIST Yatırım Komitesi (Hedge Fund Consensus)
+                                </h3>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">4 Uzman Ajan: Değer • Momentum • Risk • Baş Portföy Yöneticisi</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <span id="committeeScoreBadge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 0.35rem 0.85rem; border-radius: 20px; font-weight: 700; font-size: 1.1rem; border: 1px solid rgba(56, 189, 248, 0.4);">-</span>
+                            </div>
+                        </div>
+                        
+                        <div id="committeeSummaryBox" style="background: rgba(255,255,255,0.03); border-left: 4px solid var(--accent); padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.35rem; color: #fff;" id="committeeDecisionText">Komite Kararı Yükleniyor...</div>
+                            <div style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;" id="committeeExecSummary">Yapay zeka analistlerinin ortak müzakeresi alınıyor...</div>
+                        </div>
+
+                        <!-- 3 Ajan Kartı -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                            <!-- Değer Analisti -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600; color: #38bdf8; font-size: 0.9rem;">💼 Değer Analisti</span>
+                                    <span id="commValScore" style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">-</span>
+                                </div>
+                                <div id="commValThesis" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">-</div>
+                            </div>
+
+                            <!-- Momentum Analisti -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600; color: #c084fc; font-size: 0.9rem;">⚡ Momentum & Trend</span>
+                                    <span id="commMomScore" style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">-</span>
+                                </div>
+                                <div id="commMomThesis" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">-</div>
+                            </div>
+
+                            <!-- Risk Yöneticisi -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600; color: #f43f5e; font-size: 0.9rem;">🛡️ Risk & Tahsis</span>
+                                    <span id="commRiskScore" style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">-</span>
+                                </div>
+                                <div id="commRiskWarning" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ⏱️ Day-Trader & Time Machine Bölümü (jakeschincariol/day-trader-skill) -->
+                    <div id="timeMachineSection" style="margin-bottom: 2.5rem; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 1.75rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.35rem; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+                                    ⏱️ Time Machine Replay & Trade Brackets (day-trader-skill)
+                                </h3>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">1 Yıllık Bar Replay • Monte Carlo Olasılık Simülasyonu</span>
+                            </div>
+                            <div id="tmVerdictBadge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; padding: 0.35rem 0.85rem; border-radius: 20px; font-weight: 700; font-size: 0.95rem; border: 1px solid rgba(168, 85, 247, 0.4);">
+                                Hesaplanıyor...
+                            </div>
+                        </div>
+
+                        <!-- İstatistik Rozetleri -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                            <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Kazanma Oranı</div>
+                                <div id="tmWinRate" style="font-size: 1.3rem; font-weight: 700; color: var(--success);">-</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Kâr Faktörü</div>
+                                <div id="tmProfitFactor" style="font-size: 1.3rem; font-weight: 700; color: #38bdf8;">-</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Beklenti (Exp.)</div>
+                                <div id="tmExpectancy" style="font-size: 1.3rem; font-weight: 700; color: #fbbf24;">-</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Test Barları</div>
+                                <div id="tmSampleSize" style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary);">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Trade Brackets Tablosu -->
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                            <h5 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px;">🎯 Matematiksel Giriş, Stop & Hedef Seviyeleri (Trade Brackets)</h5>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; font-size: 0.9rem;">
+                                <div><span style="color: var(--text-secondary);">Giriş Referansı:</span> <strong id="tbEntry" style="color: #fff;">-</strong></div>
+                                <div><span style="color: var(--text-secondary);">Zarar Durdur (Stop):</span> <strong id="tbStop" style="color: #f43f5e;">-</strong></div>
+                                <div><span style="color: var(--text-secondary);">Hedef 1 (1:1 R):</span> <strong id="tbTarget1" style="color: #38bdf8;">-</strong></div>
+                                <div><span style="color: var(--text-secondary);">Hedef 2 (2:1 R):</span> <strong id="tbTarget2" style="color: var(--success);">-</strong></div>
+                                <div><span style="color: var(--text-secondary);">Risk/Ödül Oranı:</span> <strong id="tbRR" style="color: #fbbf24;">-</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <h4 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; font-size: 1.3rem; color: #fff;">Sistem Yorumu & İstatistiksel Sinyaller</h4>
                     <div id="resSignals" style="display: flex; flex-direction: column; gap: 1rem;">
                         <!-- JS ile doldurulacak -->
@@ -206,6 +303,10 @@
                         
                         document.getElementById('resPb').textContent = r.pb_ratio ? r.pb_ratio.toFixed(2) : '-';
                         document.getElementById('resPe').textContent = r.pe_ratio ? r.pe_ratio.toFixed(2) : '-';
+                        
+                        // Komite ve Time-Machine Entegrasyonlarını Çağır
+                        loadCommitteeReview(symbol);
+                        loadTimeMachine(symbol);
                         
                         let signalsContainer = document.getElementById('resSignals');
                         signalsContainer.innerHTML = '';
@@ -344,6 +445,75 @@
                 document.getElementById('analyzeBtn').click();
             }
         });
+
+        function loadCommitteeReview(symbol) {
+            document.getElementById('committeeScoreBadge').textContent = 'Analiz Ediliyor...';
+            document.getElementById('committeeDecisionText').textContent = 'Komite Toplanıyor...';
+            document.getElementById('committeeExecSummary').textContent = '4 Yapay Zeka Ajanı (Değer, Momentum, Risk, Baş Yönetici) hisseyi müzakere ediyor...';
+            
+            fetch(`/api/agent/committee/${symbol}`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success' && res.data) {
+                        let d = res.data;
+                        document.getElementById('committeeScoreBadge').textContent = `${d.consensus_score} / 100`;
+                        document.getElementById('committeeDecisionText').textContent = `🎯 Nihai Karar: ${d.final_decision}`;
+                        document.getElementById('committeeExecSummary').textContent = d.executive_summary;
+                        
+                        let color = '#38bdf8';
+                        if (d.final_decision.includes('GÜÇLÜ AL') || d.final_decision.includes('AL')) color = 'var(--success)';
+                        else if (d.final_decision.includes('RİSKLİ') || d.final_decision.includes('SAT')) color = '#f43f5e';
+                        else if (d.final_decision.includes('KADEMELİ') || d.final_decision.includes('İZLE')) color = '#fbbf24';
+                        document.getElementById('committeeSummaryBox').style.borderLeftColor = color;
+
+                        if (d.value_analyst) {
+                            document.getElementById('commValScore').textContent = `${d.value_analyst.score} Puan (${d.value_analyst.stance})`;
+                            document.getElementById('commValThesis').textContent = d.value_analyst.thesis;
+                        }
+                        if (d.momentum_analyst) {
+                            document.getElementById('commMomScore').textContent = `${d.momentum_analyst.score} Puan (${d.momentum_analyst.stance})`;
+                            document.getElementById('commMomThesis').textContent = d.momentum_analyst.thesis;
+                        }
+                        if (d.risk_officer) {
+                            document.getElementById('commRiskScore').textContent = `Maks %${d.risk_officer.max_allocation_pct} Tahsis`;
+                            document.getElementById('commRiskWarning').textContent = d.risk_officer.warning;
+                        }
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('committeeDecisionText').textContent = 'Komite verisi alınamadı.';
+                });
+        }
+
+        function loadTimeMachine(symbol) {
+            document.getElementById('tmVerdictBadge').textContent = 'Replay Çalışıyor...';
+            fetch(`/api/agent/timemachine/${symbol}`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success' && res.data) {
+                        let d = res.data;
+                        if (d.simulation) {
+                            let s = d.simulation;
+                            document.getElementById('tmVerdictBadge').textContent = s.verdict || 'Tamamlandı';
+                            document.getElementById('tmWinRate').textContent = `%${s.win_rate_percent}`;
+                            document.getElementById('tmProfitFactor').textContent = `${s.profit_factor}x`;
+                            document.getElementById('tmExpectancy').textContent = `%${s.expectancy_percent}`;
+                            document.getElementById('tmSampleSize').textContent = `${s.sample_size} Bar`;
+                        }
+                        if (d.brackets) {
+                            let b = d.brackets;
+                            document.getElementById('tbEntry').textContent = `₺${b.entry_price}`;
+                            document.getElementById('tbStop').textContent = `₺${b.stop_loss} (${b.stop_loss_pct})`;
+                            document.getElementById('tbTarget1').textContent = `₺${b.target_1} (${b.target_1_pct})`;
+                            document.getElementById('tbTarget2').textContent = `₺${b.target_2} (${b.target_2_pct})`;
+                            document.getElementById('tbRR').textContent = `${b.risk_reward_ratio}:1`;
+                        }
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('tmVerdictBadge').textContent = 'Simülasyon alınamadı.';
+                });
+        }
     </script>
 </body>
 </html>

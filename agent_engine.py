@@ -24,22 +24,49 @@ load_dotenv()
 
 class LLMAdapter:
     """
-    Gemini, Ollama, OpenAI-compatible (DeepSeek, Groq, vLLM, LM Studio)
+    Gemini, Ollama, OpenAI-compatible (DeepSeek, Groq, OpenRouter, LM Studio, FreeLLM vb.)
     sağlayıcılarını tek tip arayüzle çalıştırır.
     """
+    KNOWN_PROVIDERS = {
+        "groq": {
+            "base_url": "https://api.groq.com/openai/v1",
+            "default_model": "llama-3.3-70b-versatile"
+        },
+        "deepseek": {
+            "base_url": "https://api.deepseek.com/v1",
+            "default_model": "deepseek-chat"
+        },
+        "openrouter": {
+            "base_url": "https://openrouter.ai/api/v1",
+            "default_model": "google/gemini-2.0-flash-exp:free"
+        },
+        "lmstudio": {
+            "base_url": "http://localhost:1234/v1",
+            "default_model": "local-model"
+        }
+    }
+
     def __init__(self):
         # Sağlayıcı Seçimi (.env veya otomatik algılama)
-        self.provider = os.getenv("LLM_PROVIDER", "").lower()
-        self.gemini_key = os.getenv("GEMINI_API_KEY")
-        self.ollama_url = os.getenv("OLLAMA_API_URL")
-        self.base_url = os.getenv("LLM_BASE_URL")
-        self.api_key = os.getenv("LLM_API_KEY", self.gemini_key or "")
-        self.model_name = os.getenv("LLM_MODEL", "")
+        self.provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+        self.gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+        self.ollama_url = os.getenv("OLLAMA_API_URL", "").strip()
+        self.base_url = os.getenv("LLM_BASE_URL", "").strip()
+        self.api_key = os.getenv("LLM_API_KEY", self.gemini_key or "").strip()
+        self.model_name = os.getenv("LLM_MODEL", "").strip()
+
+        # Bilinen provider takma adlarını yapılandır
+        if self.provider in self.KNOWN_PROVIDERS:
+            meta = self.KNOWN_PROVIDERS[self.provider]
+            if not self.base_url:
+                self.base_url = meta["base_url"]
+            if not self.model_name:
+                self.model_name = meta["default_model"]
 
         # Otomatik varsayılan belirleme
         is_gemini_valid = (
-            self.gemini_key 
-            and self.gemini_key not in ["your_gemini_api_key_here", "your_google_gemini_api_key_here", ""]
+            bool(self.gemini_key)
+            and self.gemini_key not in ["your_gemini_api_key_here", "your_google_gemini_api_key_here"]
         )
 
         if not self.provider:
@@ -57,16 +84,18 @@ class LLMAdapter:
                 self.model_name = "gemini-1.5-flash"
             elif self.provider == "ollama":
                 self.model_name = os.getenv("OLLAMA_MODEL", "llama3")
-            else:
+            elif self.provider in ["openai", "openai_compatible"]:
                 self.model_name = "gpt-4o-mini"
+            else:
+                self.model_name = "gemini-1.5-flash"
 
         self._init_client()
 
     def _init_client(self):
         self.gemini_model = None
         is_gemini_valid = (
-            self.gemini_key 
-            and self.gemini_key not in ["your_gemini_api_key_here", "your_google_gemini_api_key_here", ""]
+            bool(self.gemini_key)
+            and self.gemini_key not in ["your_gemini_api_key_here", "your_google_gemini_api_key_here"]
         )
         if self.provider == "gemini" and is_gemini_valid:
             try:
@@ -74,25 +103,47 @@ class LLMAdapter:
                 genai.configure(api_key=self.gemini_key)
                 self.gemini_model = genai.GenerativeModel(self.model_name)
             except Exception as e:
-                print(f"[LLMAdapter] Gemini başlatma uyarısı: {e}")
+                print(f"[LLMAdapter] Gemini SDK başlatma uyarısı: {e}")
 
     def call_llm(self, messages: list, tools_schema: list = None) -> str:
         """
         Modelden metin yanıtı alır.
         """
-        # 1. Gemini Sağlayıcısı
-        if self.provider == "gemini" and self.gemini_model:
-            try:
-                prompt_text = ""
-                for msg in messages:
-                    role_prefix = "User" if msg["role"] == "user" else "System" if msg["role"] == "system" else "Model"
-                    prompt_text += f"{role_prefix}: {msg['content']}\n\n"
-                
-                response = self.gemini_model.generate_content(prompt_text)
-                return response.text if response else ""
-            except Exception as ge:
-                # Gemini hata verirse varsa OpenAI compatible / REST dene
-                print(f"[LLMAdapter] Gemini çağrı hatası: {ge}")
+        # 1. Gemini Sağlayıcısı (SDK veya REST API)
+        if self.provider == "gemini":
+            if self.gemini_model:
+                try:
+                    prompt_text = ""
+                    for msg in messages:
+                        role_prefix = "User" if msg["role"] == "user" else "System" if msg["role"] == "system" else "Model"
+                        prompt_text += f"{role_prefix}: {msg['content']}\n\n"
+                    
+                    response = self.gemini_model.generate_content(prompt_text)
+                    if response and response.text:
+                        return response.text
+                except Exception as ge:
+                    print(f"[LLMAdapter] Gemini SDK çağrı hatası: {ge}")
+
+            # REST Fallback for Gemini
+            if self.gemini_key and self.gemini_key not in ["your_gemini_api_key_here", "your_google_gemini_api_key_here"]:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.gemini_key}"
+                    contents = []
+                    for msg in messages:
+                        contents.append({
+                            "role": "user" if msg["role"] in ["user", "system"] else "model",
+                            "parts": [{"text": msg["content"]}]
+                        })
+                    res = requests.post(url, json={"contents": contents}, timeout=30)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts:
+                                return parts[0].get("text", "")
+                except Exception as rest_e:
+                    print(f"[LLMAdapter] Gemini REST API hatası: {rest_e}")
 
         # 2. Ollama Sağlayıcısı (Native REST)
         if self.provider == "ollama" and self.ollama_url:
@@ -112,14 +163,25 @@ class LLMAdapter:
             except Exception as oe:
                 print(f"[LLMAdapter] Ollama çağrı hatası: {oe}")
 
-        # 3. OpenAI-Compatible REST Sağlayıcısı (OpenAI, DeepSeek, Groq, LM Studio, vLLM vb.)
-        if self.base_url:
+        # 3. OpenAI-Compatible REST Sağlayıcısı (Groq, DeepSeek, OpenRouter, LM Studio, vLLM vb.)
+        target_base_url = self.base_url
+        if not target_base_url and self.provider in self.KNOWN_PROVIDERS:
+            target_base_url = self.KNOWN_PROVIDERS[self.provider]["base_url"]
+
+        if target_base_url:
             try:
-                endpoint = self.base_url.rstrip("/") + "/chat/completions"
+                endpoint = target_base_url.rstrip("/") + "/chat/completions"
                 headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.api_key}"
+                    "Content-Type": "application/json"
                 }
+                if self.api_key:
+                    headers["Authorization"] = f"Bearer {self.api_key}"
+                
+                # OpenRouter header ekleri
+                if "openrouter" in target_base_url:
+                    headers["HTTP-Referer"] = "https://github.com/virattt/ai-hedge-fund"
+                    headers["X-Title"] = "BIST Algo-Trade System"
+
                 payload = {
                     "model": self.model_name,
                     "messages": messages,
@@ -128,7 +190,9 @@ class LLMAdapter:
                 res = requests.post(endpoint, headers=headers, json=payload, timeout=60)
                 if res.status_code == 200:
                     data = res.json()
-                    return data["choices"][0]["message"]["content"]
+                    choices = data.get("choices", [])
+                    if choices:
+                        return choices[0].get("message", {}).get("content", "")
             except Exception as ope:
                 print(f"[LLMAdapter] OpenAI-Compatible çağrı hatası: {ope}")
 

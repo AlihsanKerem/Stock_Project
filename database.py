@@ -262,6 +262,17 @@ def get_all_stock_data():
     # Return list of dicts
     return [dict(row) for row in rows]
 
+def get_stock_data(symbol: str):
+    """Belirli bir hissenin stock_data tablosundaki en güncel analiz verisini çeker."""
+    sym = symbol.replace(".IS", "").strip().upper()
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM stock_data WHERE symbol = ? OR symbol = ?", (sym, f"{sym}.IS"))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 def add_tracked_stock(symbol, last_price=None):
     conn = get_connection()
     cursor = conn.cursor()

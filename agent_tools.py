@@ -14,6 +14,7 @@ from database import (
 )
 from analyzer import analyze_stock, run_analysis
 from sentiment import analyze_sentiment
+from day_trader_engine import run_time_machine_simulation, detect_chart_setups, calculate_trade_brackets, calculate_atr
 
 def format_symbol(symbol: str) -> str:
     """Sembolü temizler ve BIST için .IS uzantısı ekler."""
@@ -309,6 +310,54 @@ def tool_get_tracked_watchlist() -> dict:
     except Exception as e:
         return {"status": "error", "message": f"Takip listesi alınırken hata: {str(e)}"}
 
+def tool_run_time_machine(symbol: str, target_pct: float = 4.0, stop_pct: float = 2.5) -> dict:
+    """
+    Belirli bir BIST hissesi için Time Machine geçmiş bar tekrar simülasyonunu çalıştırır.
+    Kazanma oranı (win rate), beklenti (expectancy) ve kâr faktörünü döner.
+    """
+    return run_time_machine_simulation(symbol, target_pct=float(target_pct), stop_pct=float(stop_pct))
+
+def tool_get_day_trading_setups(symbol: str) -> dict:
+    """
+    Hisse için gün içi formasyon kırılımlarını (Boğa Flaması, Aşırı Satım Tepkisi, Destek Dönüşü)
+    ve kesin Stop-Loss/Hedef braketlerini döner.
+    """
+    try:
+        clean_sym = clean_symbol(symbol)
+        ticker = yf.Ticker(format_symbol(symbol))
+        df = ticker.history(period="60d")
+        if df.empty or len(df) < 15:
+            return {"status": "error", "message": f"{clean_sym} için grafik verisi alınamadı."}
+        
+        cur_price = float(df['Close'].iloc[-1])
+        atr_series = calculate_atr(df)
+        cur_atr = float(atr_series.iloc[-1]) if not atr_series.empty else cur_price * 0.03
+        
+        brackets = calculate_trade_brackets(cur_price, cur_atr)
+        setups = detect_chart_setups(df)
+        
+        return {
+            "status": "success",
+            "symbol": clean_sym,
+            "current_price": cur_price,
+            "brackets": brackets,
+            "setups": setups
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Day-trading tarama hatası: {str(e)}"}
+
+def tool_get_committee_review(symbol: str) -> dict:
+    """
+    Hisse senedi hakkında 4 uzman ajanın (Değer, Momentum, Risk, Baş Portföy Yöneticisi)
+    ortak komite müzakeresini ve nihai kararını döner.
+    """
+    try:
+        from committee_engine import BistInvestmentCommittee
+        committee = BistInvestmentCommittee()
+        return committee.evaluate_stock(symbol)
+    except Exception as e:
+        return {"status": "error", "message": f"Komite değerlendirme hatası: {str(e)}"}
+
 # ==========================================
 # 📋 Standart Araç Şemaları (Tool Schemas)
 # ==========================================
@@ -426,6 +475,65 @@ AVAILABLE_TOOLS_SCHEMA = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_run_time_machine",
+            "description": "Hissenin teknik setup'ını geçmiş 1 yıllık barlarda geriye sarıp simüle eder. Kazanma oranı (win rate %), beklenti oranı ve kâr faktörünü hesaplar.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Hisse senedi sembolü (Örn: THYAO, EREGL)"
+                    },
+                    "target_pct": {
+                        "type": "number",
+                        "description": "Test edilecek hedef kâr yüzdesi (Varsayılan: 4.0)"
+                    },
+                    "stop_pct": {
+                        "type": "number",
+                        "description": "Test edilecek zarar durdurma yüzdesi (Varsayılan: 2.5)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_get_day_trading_setups",
+            "description": "Hisse için gün içi ve kısa vadeli formasyon kırılımlarını (Boğa Flaması, Aşırı Satım Tepkisi vb.) ve matematiksel Stop-Loss/Hedef fiyat seviyelerini döner.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Hisse senedi sembolü (Örn: THYAO, ASELS)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_get_committee_review",
+            "description": "virattt/ai-hedge-fund mimarisiyle hisseyi 4 rollü (Değer Analisti, Momentum Analisti, Risk Yöneticisi ve Baş Portföy Yöneticisi) BIST Yatırım Komitesine sunar ve çelişkileri uzlaştırılmış nihai kurumsal kararı (GÜÇLÜ AL, KADEMELİ AL, TUT vb.) döner.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Hisse senedi sembolü (Örn: THYAO, EREGL, GARAN)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
     }
 ]
 
@@ -437,7 +545,10 @@ TOOLS_MAP = {
     "tool_get_news_and_sentiment": tool_get_news_and_sentiment,
     "tool_create_price_alert": tool_create_price_alert,
     "tool_get_active_signals": tool_get_active_signals,
-    "tool_get_tracked_watchlist": tool_get_tracked_watchlist
+    "tool_get_tracked_watchlist": tool_get_tracked_watchlist,
+    "tool_run_time_machine": tool_run_time_machine,
+    "tool_get_day_trading_setups": tool_get_day_trading_setups,
+    "tool_get_committee_review": tool_get_committee_review
 }
 
 def execute_agent_tool(tool_name: str, arguments: dict) -> dict:
