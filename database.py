@@ -193,6 +193,24 @@ def init_db():
         )
     ''')
 
+    # AI Tahmin Takip ve Doğrulama Tablosu
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ai_predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            decision TEXT NOT NULL,
+            consensus_score INTEGER NOT NULL,
+            entry_price REAL NOT NULL,
+            target_price REAL NOT NULL,
+            stop_loss REAL NOT NULL,
+            last_checked_price REAL,
+            pnl_pct REAL DEFAULT 0.0,
+            status TEXT DEFAULT 'OPEN',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_checked_at TIMESTAMP
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -939,6 +957,85 @@ def get_agent_profile():
     for k, v in rows:
         profile[k] = v
     return profile
+
+# ==========================================
+# 🎯 AI Tahmin Takip & Doğrulama Fonksiyonları
+# ==========================================
+
+def save_ai_prediction(symbol, decision, consensus_score, entry_price, target_price, stop_loss):
+    """
+    Yapay zeka komitesinin ürettiği tahminleri veritabanına kaydeder.
+    Aynı hisse için halihazırda OPEN bir tahmin varsa günceller (mükerrer kaydı önler).
+    """
+    sym = symbol.replace(".IS", "").strip().upper()
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM ai_predictions WHERE symbol = ? AND status = 'OPEN'", (sym,))
+    existing = cursor.fetchone()
+    
+    if existing:
+        cursor.execute('''
+            UPDATE ai_predictions
+            SET decision = ?, consensus_score = ?, entry_price = ?, target_price = ?, stop_loss = ?,
+                last_checked_price = ?, pnl_pct = 0.0, created_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (decision, int(consensus_score), float(entry_price), float(target_price), float(stop_loss), float(entry_price), existing[0]))
+        pred_id = existing[0]
+    else:
+        cursor.execute('''
+            INSERT INTO ai_predictions (symbol, decision, consensus_score, entry_price, target_price, stop_loss, last_checked_price, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')
+        ''', (sym, decision, int(consensus_score), float(entry_price), float(target_price), float(stop_loss), float(entry_price)))
+        pred_id = cursor.lastrowid
+        
+    conn.commit()
+    conn.close()
+    return pred_id
+
+def get_open_ai_predictions():
+    """Açık (henüz hedefe veya stopa ulaşmamış) AI tahminlerini döner."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ai_predictions WHERE status = 'OPEN' ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def update_ai_prediction_status(pred_id, last_checked_price, pnl_pct, status):
+    """Tahminin güncel fiyatını, K/Z yüzdesini ve durumunu günceller."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE ai_predictions
+        SET last_checked_price = ?, pnl_pct = ?, status = ?, last_checked_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (float(last_checked_price), float(pnl_pct), status, int(pred_id)))
+    conn.commit()
+    conn.close()
+
+def get_ai_prediction_stats(limit=50):
+    """Geçmiş ve açık AI tahminlerinin genel isabet istatistiklerini döner."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ai_predictions ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    
+    total = len(rows)
+    wins = sum(1 for r in rows if r['status'] == 'HIT_TARGET' or (r['status'] == 'OPEN' and (r.get('pnl_pct') or 0) > 0))
+    losses = sum(1 for r in rows if r['status'] == 'HIT_STOP' or (r['status'] == 'OPEN' and (r.get('pnl_pct') or 0) < 0))
+    accuracy = round((wins / total) * 100, 1) if total > 0 else 0.0
+    
+    return {
+        "total": total,
+        "wins": wins,
+        "losses": losses,
+        "accuracy_pct": accuracy,
+        "predictions": rows
+    }
 
 # Initialize db when this file is imported
 init_db()

@@ -10,6 +10,10 @@ import asyncio
 from analyzer import run_analysis
 from sentiment import analyze_sentiment
 from agent_engine import stock_agent
+from prediction_tracker import (
+    is_bist_market_open, is_weekday,
+    run_funnel_committee_digest, evaluate_open_predictions
+)
 import yfinance as yf
 from database import get_tracked_stocks, update_tracked_stock_price, get_active_alerts, mark_alert_triggered
 
@@ -53,58 +57,26 @@ def job():
     except Exception as be:
         print(f"Otomatik yedekleme uyarısı: {be}")
 
-    # Sinyalleri analyzer üzerinden al
+    # Sinyalleri analyzer üzerinden al (tüm liste veritabanına ve Web Dashboard'a kaydolur)
     signals = run_analysis()
     
     if not signals:
         print("Bugün için herhangi bir sinyal bulunamadı.")
         return
 
-    print(f"Toplam {len(signals)} adet sinyal bulundu. Haber analizleri yapılıyor...")
+    print(f"Toplam {len(signals)} adet sinyal bulundu. Akıllı Huni & Yatırım Komitesi çalıştırılıyor...")
     
-    final_messages = []
-    
-    for signal in signals:
-        symbol = signal['symbol']
-        msg = signal['message']
-        
-        # Haber duygu analizi (Sentiment Analysis)
-        sentiment_result = analyze_sentiment(symbol)
-        
-        if sentiment_result and sentiment_result.get('status') not in ['error', 'neutral']:
-            status = sentiment_result['status']
-            title = sentiment_result.get('title', '')
-            link = sentiment_result.get('link', '')
-            
-            # Duruma göre emoji
-            emoji = "🟢" if status == "OLUMLU" else "🔴" if status == "OLUMSUZ" else "⚪"
-            
-            sentiment_msg = f"\n{emoji} <b>Haber Analizi:</b> {status}\n<i>{title}</i>\n<a href='{link}'>Habere Git</a>"
-            msg += sentiment_msg
-        
-        final_messages.append(msg)
-        
-    # Telegram'ın 4096 karakter sınırını aşmamak için mesajları bölerek gönderelim
-    MAX_LENGTH = 3500
-    messages_to_send = []
-    current_message = "<b>📈 GÜNLÜK HİSSE SİNYALLERİ</b>\n\n"
-    
-    for msg in final_messages:
-        addition = f"• {msg}\n\n"
-        if len(current_message) + len(addition) > MAX_LENGTH:
-            messages_to_send.append(current_message)
-            current_message = "<b>📈 SİNYALLER (Devamı)</b>\n\n" + addition
-        else:
-            current_message += addition
-            
-    if current_message:
-        messages_to_send.append(current_message)
-        
-    # Asenkron fonksiyonu çalıştır
-    for m in messages_to_send:
-        asyncio.run(send_telegram_message(m))
+    # Uzun ham listeler yerine sadece en güçlü 5 adayı Komite + Time Machine'den geçirip kısa özet at
+    digest = run_funnel_committee_digest(signals, max_candidates=5)
+    digest_msg = digest.get("digest_message")
+    if digest_msg:
+        asyncio.run(send_telegram_message(digest_msg))
 
 def check_tracked_stocks_job():
+    if not is_bist_market_open():
+        print("⏸️ BIST seans saatleri dışında (veya hafta sonu), takip listesi kontrolü atlandı.")
+        return
+
     print("\n" + "="*50)
     print("Takip Edilen Hisseler Kontrol Ediliyor...")
     print("="*50)
@@ -157,6 +129,10 @@ def check_alerts_job():
     """
     Aktif kullanıcı fiyat alarmlarını kontrol eder ve tetiklenenleri Telegram'a iletir.
     """
+    if not is_bist_market_open():
+        print("⏸️ BIST seans saatleri dışında (veya hafta sonu), alarm kontrolü atlandı.")
+        return
+
     print("\n" + "="*50)
     print("Aktif Fiyat Alarmları Kontrol Ediliyor...")
     print("="*50)
@@ -309,6 +285,27 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
     except Exception as e:
         await update.message.reply_text(f"⚠️ Ajan hatası: {e}")
 
+def check_predictions_job():
+    """
+    Hafta içi günde 3 kez (Sabah 10:30, Öğle 14:00, Akşam 18:15)
+    açık AI tahminlerini canlı piyasa fiyatıyla karşılaştırıp Telegram'a karne gönderir.
+    """
+    if not is_weekday():
+        return
+
+    print("\n" + "="*50)
+    print("🎯 AI Tahmin Doğrulama Kontrolü Başlıyor...")
+    print("="*50)
+    try:
+        res = evaluate_open_predictions()
+        report_msg = res.get("report_message")
+        if report_msg:
+            asyncio.run(send_telegram_message(report_msg))
+        else:
+            print("Kontrol edilecek açık AI tahmini bulunmuyor.")
+    except Exception as pe:
+        print(f"Tahmin doğrulama hatası: {pe}")
+
 def run_scheduler_thread():
     """Zamanlanmış görevleri arka plan iş parçacığında çalıştırır."""
     while True:
@@ -320,7 +317,7 @@ def run_scheduler_thread():
 
 def main():
     print("Sistem başlatıldı. Telegram ve API ayarlarınızı .env dosyasından kontrol ediniz.")
-    print("Günlük tarama her gün saat 18:30'da çalışacak şekilde ayarlandı.")
+    print("Günlük tarama hafta içi her gün saat 18:30'da çalışacak şekilde ayarlandı.")
     
     # Hafta içi her gün 18:30'da çalıştır (Borsa kapandıktan sonra)
     schedule.every().monday.at("18:30").do(job)
@@ -328,6 +325,11 @@ def main():
     schedule.every().wednesday.at("18:30").do(job)
     schedule.every().thursday.at("18:30").do(job)
     schedule.every().friday.at("18:30").do(job)
+
+    # Gün içi 3 kez AI tahmin doğrulama kontrolü (Sabah, Öğle, Akşam)
+    schedule.every().day.at("10:30").do(check_predictions_job)
+    schedule.every().day.at("14:00").do(check_predictions_job)
+    schedule.every().day.at("18:15").do(check_predictions_job)
     
     # Her 30 dakikada bir takip listesini kontrol et
     schedule.every(30).minutes.do(check_tracked_stocks_job)
