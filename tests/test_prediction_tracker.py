@@ -111,5 +111,47 @@ class TestFunnelAndPredictions(unittest.TestCase):
         self.assertIn("TESTB", res["report_message"])
         self.assertIn("Stop", res["report_message"])
 
+    def test_save_ai_prediction_preserves_original_entry(self):
+        database.save_ai_prediction("TESTA", "KADEMELİ AL", 70, 100.0, 106.0, 95.0)
+        # Attempt to save again while OPEN with a different price
+        database.save_ai_prediction("TESTA", "GÜÇLÜ AL", 80, 92.0, 98.0, 88.0)
+
+        open_preds = [p for p in database.get_open_ai_predictions() if p["symbol"] == "TESTA"]
+        self.assertEqual(len(open_preds), 1)
+        self.assertEqual(open_preds[0]["entry_price"], 100.0)
+
+    def test_evaluate_open_predictions_flat_zero_pct(self):
+        database.save_ai_prediction("TESTC", "KADEMELİ AL", 70, 50.0, 55.0, 47.0)
+        res = evaluate_open_predictions(price_fetcher=lambda s: 50.0 if s == "TESTC" else None)
+        self.assertIn("Yatay", res["report_message"])
+
+    @patch("prediction_tracker.run_time_machine_simulation")
+    @patch("prediction_tracker.BistInvestmentCommittee")
+    def test_funnel_penalizes_low_time_machine(self, mock_comm_cls, mock_tm):
+        mock_comm = MagicMock()
+        mock_comm.evaluate_stock.return_value = {
+            "symbol": "TESTC",
+            "current_price": 100.0,
+            "consensus_score": 70,
+            "final_decision": "GÜÇLÜ AL",
+            "executive_summary": "Özet."
+        }
+        mock_comm_cls.return_value = mock_comm
+
+        mock_tm.return_value = {
+            "status": "success",
+            "brackets": {"entry_price": 100.0, "stop_loss": 94.0, "target_1": 106.0},
+            "simulation": {"win_rate_percent": 32.0, "profit_factor": 0.9}
+        }
+
+        signals = [{"symbol": "TESTC.IS", "action": "BUY", "is_conflict": 0, "is_validated": 1, "win_rate": 60.0, "avg_return": 3.0}]
+        res = run_funnel_committee_digest(signals, max_candidates=3)
+        item = res["evaluated"][0]
+        self.assertEqual(item["score"], 55)
+        self.assertNotEqual(item["decision"], "GÜÇLÜ AL")
+        # Low time machine (<45%) should NOT be saved as an active AL prediction
+        open_syms = [p["symbol"] for p in database.get_open_ai_predictions()]
+        self.assertNotIn("TESTC", open_syms)
+
 if __name__ == "__main__":
     unittest.main()

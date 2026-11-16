@@ -110,9 +110,18 @@ def run_funnel_committee_digest(signals: list, max_candidates: int = 5) -> dict:
         score = int(comm_rep.get("consensus_score", 50))
         win_rate = float(sim.get("win_rate_percent", 0.0))
 
-        # Sadece AL yönlü kararları tahmin takip sistemine kaydet
+        # Time Machine başarısı düşükse (< %45) komite skorunu düşür ve kararı temkinliye çek
+        low_tm = (0.0 < win_rate < 45.0)
+        if low_tm:
+            score = max(10, score - 15)
+            if "GÜÇLÜ AL" in decision.upper():
+                decision = "KADEMELİ AL (Düşük İstatistik)"
+            elif "AL" in decision.upper() and score < 60:
+                decision = "TUT / İZLE (Düşük Time Machine)"
+
+        # Sadece AL yönlü ve Time Machine istatistiği yeterli (>= %45 veya veri yoksa) kararları tahmin takip sistemine kaydet
         is_buy_decision = ("AL" in decision.upper()) and ("UZAK DUR" not in decision.upper()) and ("SAT" not in decision.upper())
-        if is_buy_decision and entry_p > 0:
+        if is_buy_decision and not low_tm and entry_p > 0:
             save_ai_prediction(sym, decision, score, entry_p, target_p, stop_l)
 
         evaluated.append({
@@ -196,7 +205,12 @@ def evaluate_open_predictions(price_fetcher=None) -> dict:
             status_label = "🛑 Stop Oldu"
         else:
             new_status = "OPEN"
-            status_label = "📈 Doğru Yönde (Kârda)" if pnl_pct > 0 else "📉 Ekside (İzleniyor)"
+            if pnl_pct > 0:
+                status_label = "📈 Doğru Yönde (Kârda)"
+            elif abs(pnl_pct) < 0.01:
+                status_label = "➖ Yatay (İzleniyor)"
+            else:
+                status_label = "📉 Ekside (İzleniyor)"
 
         update_ai_prediction_status(pred["id"], cur_p, pnl_pct, new_status)
         checked += 1

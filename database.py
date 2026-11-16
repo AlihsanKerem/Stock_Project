@@ -965,7 +965,7 @@ def get_agent_profile():
 def save_ai_prediction(symbol, decision, consensus_score, entry_price, target_price, stop_loss):
     """
     Yapay zeka komitesinin ürettiği tahminleri veritabanına kaydeder.
-    Aynı hisse için halihazırda OPEN bir tahmin varsa günceller (mükerrer kaydı önler).
+    Aynı hisse için halihazırda OPEN bir tahmin varsa orijinal giriş fiyatını ve tarihini korur.
     """
     sym = symbol.replace(".IS", "").strip().upper()
     conn = get_connection()
@@ -975,12 +975,7 @@ def save_ai_prediction(symbol, decision, consensus_score, entry_price, target_pr
     existing = cursor.fetchone()
     
     if existing:
-        cursor.execute('''
-            UPDATE ai_predictions
-            SET decision = ?, consensus_score = ?, entry_price = ?, target_price = ?, stop_loss = ?,
-                last_checked_price = ?, pnl_pct = 0.0, created_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (decision, int(consensus_score), float(entry_price), float(target_price), float(stop_loss), float(entry_price), existing[0]))
+        # Orijinal giriş fiyatını ve K/Z takibini bozmamak için üzerine yazma
         pred_id = existing[0]
     else:
         cursor.execute('''
