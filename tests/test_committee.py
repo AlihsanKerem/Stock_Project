@@ -69,5 +69,22 @@ class TestInvestmentCommittee(unittest.TestCase):
         self.assertEqual(rep["symbol"], "THYAO")
         self.assertIn("chief_portfolio_manager", rep)
 
+    def test_falling_knife_cannot_be_strong_buy(self):
+        # Simulate SOKM-like falling stock: cheap fundamentals, low RSI, downtrend
+        falling_metrics = {
+            "symbol": "SOKM",
+            "current_price": 41.04,
+            "pe_ratio": 5.5,
+            "pb_ratio": 1.1,
+            "rsi": 28.0,
+            "trend": "AŞAĞI",
+            "atr_14": 1.4,
+            "stop_loss": 38.15,
+            "setups": [{"setup_type": "AŞIRI_SATIM_TEPKİSİ", "direction": "LONG", "confidence": 75}]
+        }
+        rep = build_deterministic_committee_report(falling_metrics)
+        self.assertNotEqual(rep["final_decision"], "GÜÇLÜ AL")
+        self.assertNotEqual(rep["momentum_analyst"]["stance"], "BULLISH")
+
 if __name__ == "__main__":
     unittest.main()

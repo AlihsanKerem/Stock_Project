@@ -13,7 +13,7 @@ import json
 import yfinance as yf
 from agent_engine import LLMAdapter
 from day_trader_engine import (
-    format_bist_symbol, clean_bist_symbol, calculate_atr, 
+    format_bist_symbol, clean_bist_symbol, calculate_atr, calculate_rsi,
     detect_chart_setups, calculate_trade_brackets
 )
 from database import get_stock_data, get_portfolio_positions
@@ -123,21 +123,28 @@ def build_deterministic_committee_report(metrics: dict) -> dict:
         mom_points.append("Fiyat orta vadeli yükselen ana trend kanalında ilerliyor.")
     elif trend == "AŞAĞI":
         mom_score -= 20
-        mom_points.append("Fiyat düşen trend baskısı altında.")
+        mom_points.append("Fiyat düşen trend baskısı altında (SMA20/SMA50 altı).")
         
     if rsi < 35:
-        mom_score += 15
-        mom_points.append(f"RSI ({rsi:.1f}) aşırı satım bölgesinde, yukarı yönlü teknik tepki bekleniyor.")
+        if trend == "AŞAĞI":
+            mom_score += 5
+            mom_points.append(f"RSI ({rsi:.1f}) aşırı satım bölgesinde ancak fiyat hâlâ düşüş trendinde (düşen bıçak riski).")
+        else:
+            mom_score += 15
+            mom_points.append(f"RSI ({rsi:.1f}) aşırı satım bölgesinde, yukarı yönlü teknik tepki bekleniyor.")
     elif rsi > 70:
         mom_score -= 15
         mom_points.append(f"RSI ({rsi:.1f}) aşırı alım bölgesinde, kâr realizasyonu riski yüksek.")
         
     for s in setups:
         if s.get("direction") == "LONG":
-            mom_score += 10
+            mom_score += 5 if trend == "AŞAĞI" else 10
             mom_points.append(f"Aktif Formasyon: {s.get('setup_type')} ({s.get('description', '')})")
             
     mom_score = max(10, min(95, mom_score))
+    if trend == "AŞAĞI":
+        # Düşüş trendindeki hisseye Momentum Analisti asla BULLISH demez
+        mom_score = min(mom_score, 55)
     mom_stance = "BULLISH" if mom_score >= 65 else "BEARISH" if mom_score <= 40 else "NEUTRAL"
     mom_thesis = " ".join(mom_points) if mom_points else "Teknik göstergeler nötr bantta konsolide oluyor."
     
@@ -229,6 +236,22 @@ class BistInvestmentCommittee:
                 atr_s = calculate_atr(df)
                 if not atr_s.empty:
                     cur_atr = float(atr_s.iloc[-1])
+                
+                # Canlı RSI ve Gerçek Trend (SMA20 / SMA50) hesapla
+                rsi_s = calculate_rsi(df['Close'])
+                if not rsi_s.empty:
+                    rsi = float(rsi_s.iloc[-1])
+                
+                if len(df) >= 20:
+                    sma20 = float(df['Close'].rolling(20).mean().iloc[-1])
+                    sma50 = float(df['Close'].rolling(50).mean().iloc[-1]) if len(df) >= 50 else sma20
+                    if cur_p > sma20 and (sma20 >= sma50 or cur_p > sma50):
+                        trend = "YUKARI"
+                    elif cur_p < sma20 and (cur_p < sma50 or (len(df) >= 6 and cur_p < float(df['Close'].iloc[-6]))):
+                        trend = "AŞAĞI"
+                    else:
+                        trend = "NÖTR"
+
                 setups = detect_chart_setups(df)
                 
                 # yfinance fundamentals

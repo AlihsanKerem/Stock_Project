@@ -18,7 +18,7 @@ class TestLLMAdapter(unittest.TestCase):
         with patch.dict(os.environ, {"GEMINI_API_KEY": "AIzaSyTestKey123", "LLM_PROVIDER": ""}, clear=True):
             adapter = LLMAdapter()
             self.assertEqual(adapter.provider, "gemini")
-            self.assertEqual(adapter.model_name, "gemini-1.5-flash")
+            self.assertEqual(adapter.model_name, "gemini-3.8-flash")
 
     def test_provider_auto_detection_ollama(self):
         with patch.dict(os.environ, {"OLLAMA_API_URL": "http://localhost:11434/api/generate", "LLM_PROVIDER": ""}, clear=True):

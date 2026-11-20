@@ -13,7 +13,8 @@ from database import (
     save_ai_prediction,
     get_open_ai_predictions,
     update_ai_prediction_status,
-    get_ai_prediction_stats
+    get_ai_prediction_stats,
+    get_recently_stopped_symbols
 )
 from committee_engine import BistInvestmentCommittee
 from day_trader_engine import run_time_machine_simulation, format_bist_symbol, clean_bist_symbol
@@ -66,11 +67,14 @@ def select_top_candidates(signals: list, max_candidates: int = 5) -> list:
 
     filtered.sort(key=_score, reverse=True)
 
+    # Son 5 gün içinde HIT_STOP olmuş hisseleri soğuma süresine al
+    stopped_cooldown = get_recently_stopped_symbols(cooldown_days=5)
+
     top_symbols = []
     seen = set()
     for s in filtered:
         sym = clean_bist_symbol(s.get("symbol", ""))
-        if sym and sym not in seen:
+        if sym and sym not in seen and sym not in stopped_cooldown:
             seen.add(sym)
             top_symbols.append(sym)
         if len(top_symbols) >= max_candidates:

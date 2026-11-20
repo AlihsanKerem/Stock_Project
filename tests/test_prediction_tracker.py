@@ -153,5 +153,18 @@ class TestFunnelAndPredictions(unittest.TestCase):
         open_syms = [p["symbol"] for p in database.get_open_ai_predictions()]
         self.assertNotIn("TESTC", open_syms)
 
+    def test_stopped_symbol_cooldown_excluded(self):
+        # Save TESTA and mark it HIT_STOP
+        pred_id = database.save_ai_prediction("TESTA", "GÜÇLÜ AL", 70, 100.0, 106.0, 95.0)
+        database.update_ai_prediction_status(pred_id, 94.0, -6.0, "HIT_STOP")
+
+        signals = [
+            {"symbol": "TESTA.IS", "action": "BUY", "is_conflict": 0, "is_validated": 1, "win_rate": 75.0, "avg_return": 5.0},
+            {"symbol": "TESTB.IS", "action": "BUY", "is_conflict": 0, "is_validated": 1, "win_rate": 60.0, "avg_return": 3.0},
+        ]
+        top = select_top_candidates(signals, max_candidates=5)
+        self.assertNotIn("TESTA", top)
+        self.assertIn("TESTB", top)
+
 if __name__ == "__main__":
     unittest.main()

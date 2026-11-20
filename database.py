@@ -1032,6 +1032,22 @@ def get_ai_prediction_stats(limit=50):
         "predictions": rows
     }
 
+def get_recently_stopped_symbols(cooldown_days=5):
+    """
+    Son N gün içinde HIT_STOP olmuş hisselerin sembol kümesini döner.
+    Düşen hisselerin stop olduktan hemen sonra tekrar önerilmesini (soğuma süresi) engeller.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT symbol FROM ai_predictions
+        WHERE status = 'HIT_STOP'
+          AND COALESCE(last_checked_at, created_at) >= datetime('now', ?)
+    ''', (f'-{int(cooldown_days)} days',))
+    rows = cursor.fetchall()
+    conn.close()
+    return {r[0].replace(".IS", "").strip().upper() for r in rows if r[0]}
+
 # Initialize db when this file is imported
 init_db()
 

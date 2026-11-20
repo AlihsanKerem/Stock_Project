@@ -81,7 +81,7 @@ class LLMAdapter:
 
         if not self.model_name:
             if self.provider == "gemini":
-                self.model_name = "gemini-1.5-flash"
+                self.model_name = "gemini-3.8-flash"
             elif self.provider == "ollama":
                 self.model_name = os.getenv("OLLAMA_MODEL", "llama3")
             elif self.provider in ["openai", "openai_compatible"]:
