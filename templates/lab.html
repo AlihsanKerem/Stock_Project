@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strateji Laboratuvarı - BIST Algo-Trade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .lab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .lab-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.35rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .lab-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.45);
+        }
+        .lab-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding-bottom: 0.75rem;
+        }
+        .ver-badge {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .pos-chip {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .horizon-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 1.5rem 0 0.85rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .audit-row {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid #c084fc;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.85rem;
+        }
+        .pnl-pos { color: var(--success); }
+        .pnl-neg { color: #f43f5e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">🧪</span>
+                <div>
+                    <h1>Strateji Laboratuvarı</h1>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">9 Otonom Sanal Portföy (2.000 ₺) & AI Öz-Denetim Evrimi</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-link">📊 Dashboard</a>
+                <a href="/portfolio" class="nav-link">💼 Portföy</a>
+                <a href="/lab" class="nav-link active">🧪 Strateji Lab</a>
+                <a href="/hisse-analiz" class="nav-link">🎯 Tekli Hisse</a>
+                <a href="/takip" class="nav-link">👀 Takip & 🔔 Alarmlar</a>
+            </nav>
+            <div>
+                <button id="runLabBtn" style="background: var(--accent); color: #000; border: none; padding: 0.65rem 1.15rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    ⚡ Döngüyü Şimdi Çalıştır
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div id="labStatusMsg" style="display:none; padding: 0.85rem 1.25rem; border-radius: 8px; margin-bottom: 1.25rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #e2e8f0;"></div>
+
+            <div class="horizon-title">⚡ Kısa Vade Portföyleri (3 İş Günü)</div>
+            <div id="gridShort" class="lab-grid"></div>
+
+            <div class="horizon-title">⚖️ Orta Vade Portföyleri (7 İş Günü)</div>
+            <div id="gridMedium" class="lab-grid"></div>
+
+            <div class="horizon-title">🏛️ Uzun Vade Portföyleri (21 İş Günü)</div>
+            <div id="gridLong" class="lab-grid"></div>
+
+            <div style="margin-top: 2.5rem; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+                <h3 style="margin-top: 0; margin-bottom: 1rem; color: #fff;">🧠 AI Öz-Denetim & Parametre Evrimi Günlüğü</h3>
+                <div id="auditLogsContainer" style="color: var(--text-secondary);">Yükleniyor...</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadLabOverview);
+
+        document.getElementById('runLabBtn').addEventListener('click', () => {
+            const btn = document.getElementById('runLabBtn');
+            const msg = document.getElementById('labStatusMsg');
+            btn.disabled = true;
+            btn.textContent = '⏳ Çalıştırılıyor...';
+            msg.style.display = 'block';
+            msg.textContent = '9 sanal portföy güncelleniyor ve uygun hisseler taranıyor...';
+
+            fetch('/api/lab/run', { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ Döngüyü Şimdi Çalıştır';
+                    if (res.status === 'success') {
+                        const d = res.data;
+                        msg.textContent = `✅ Tamamlandı! ${d.portfolios_count} portföy kontrol edildi, ${d.opened_positions} yeni sanal pozisyon açıldı, ${d.audit_events.length} öz-denetim evrimi gerçekleşti.`;
+                        loadLabOverview();
+                    } else {
+                        msg.textContent = '❌ Hata: ' + res.message;
+                    }
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ Döngüyü Şimdi Çalıştır';
+                    msg.textContent = '❌ Bağlantı hatası: ' + err;
+                });
+        });
+
+        function renderCard(p) {
+            const pnlClass = p.pnl_pct >= 0 ? 'pnl-pos' : 'pnl-neg';
+            const sign = p.pnl_pct > 0 ? '+' : '';
+            let posHtml = '';
+            if (p.open_positions && p.open_positions.length > 0) {
+                posHtml = p.open_positions.map(pos => {
+                    const pCls = (pos.pnl_pct || 0) >= 0 ? 'pnl-pos' : 'pnl-neg';
+                    const pSign = (pos.pnl_pct || 0) > 0 ? '+' : '';
+                    return `
+                        <div class="pos-chip">
+                            <div>
+                                <strong>${pos.symbol}</strong> <span style="color:var(--text-secondary); font-size:0.8rem;">(${pos.lots} lot @ ${pos.entry_price}₺)</span>
+                                <div style="font-size:0.72rem; color:var(--text-secondary);">Hedef: ${pos.target_price}₺ | Stop: ${pos.stop_loss}₺</div>
+                            </div>
+                            <div class="${pCls}" style="font-weight:700;">${pSign}${(pos.pnl_pct || 0).toFixed(2)}%</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                posHtml = '<div style="font-size:0.82rem; color:var(--text-secondary); padding: 0.4rem 0;">Henüz açık pozisyon yok (Döngü çalıştırıldığında alır).</div>';
+            }
+
+            return `
+                <div class="lab-card">
+                    <div class="lab-card-header">
+                        <div>
+                            <div style="font-size:0.78rem; color:#38bdf8; font-weight:700;">${p.code} • ${p.horizon_days} İŞ GÜNÜ</div>
+                            <h4 style="margin:2px 0 0 0; color:#fff; font-size:1.05rem;">${p.name}</h4>
+                        </div>
+                        <span class="ver-badge">v${p.version}</span>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.85rem;">
+                        <div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Güncel Değer (Başlangıç: ${p.initial_capital}₺)</div>
+                            <div style="font-size:1.45rem; font-weight:700; color:#fff;">${p.total_value.toFixed(2)} ₺</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="${pnlClass}" style="font-size:1.15rem; font-weight:700;">${sign}${p.pnl_pct}%</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">İsabet: %${p.win_rate} (${p.win_trades}/${p.total_trades})</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:0.75rem;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem;">Açık Sanal Pozisyonlar (Nakit: ${p.cash_balance.toFixed(0)}₺)</div>
+                        ${posHtml}
+                    </div>
+
+                    <div style="font-size:0.72rem; color:var(--text-secondary); border-top:1px solid rgba(255,255,255,0.05); padding-top:0.5rem;">
+                        Kurallar: RSI ${p.params.min_rsi || 0}-${p.params.max_rsi || 100} | Stop ${p.params.stop_atr_mult}x ATR | Hedef ${p.params.target_atr_mult}x ATR
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadLabOverview() {
+            fetch('/api/lab/overview')
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status !== 'success') return;
+                    const shortP = res.portfolios.filter(p => p.horizon_days <= 3);
+                    const medP = res.portfolios.filter(p => p.horizon_days > 3 && p.horizon_days <= 10);
+                    const longP = res.portfolios.filter(p => p.horizon_days > 10);
+
+                    document.getElementById('gridShort').innerHTML = shortP.map(renderCard).join('');
+                    document.getElementById('gridMedium').innerHTML = medP.map(renderCard).join('');
+                    document.getElementById('gridLong').innerHTML = longP.map(renderCard).join('');
+
+                    const auditEl = document.getElementById('auditLogsContainer');
+                    if (!res.audits || res.audits.length === 0) {
+                        auditEl.innerHTML = 'Henüz döngüsünü tamamlayıp parametre evrimi geçiren portföy yok. Portföyler vadelerini (3/7/21 gün) tamamladıkça AI teşhisleri burada görünecektir.';
+                    } else {
+                        auditEl.innerHTML = res.audits.map(a => {
+                            const diffs = Object.entries(a.param_changes || {}).map(([k, v]) => `${k}: ${v.old} → ${v.new}`).join(' | ') || 'Parametreler korundu';
+                            return `
+                                <div class="audit-row">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem;">
+                                        <strong style="color:#fff;">${a.portfolio_code} — ${a.portfolio_name} (v${a.version_from} → v${a.version_to})</strong>
+                                        <span style="font-size:0.8rem; color:var(--text-secondary);">${a.created_at}</span>
+                                    </div>
+                                    <div style="color:#e2e8f0; font-size:0.9rem; margin-bottom:0.35rem;"><i>"${a.diagnosis}"</i></div>
+                                    <div style="font-size:0.8rem; color:#38bdf8;">Değişiklik: <code>${diffs}</code> (Döngü Ort: %${a.cycle_pnl_pct})</div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

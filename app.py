@@ -767,6 +767,61 @@ def api_agent_timemachine(symbol):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/lab')
+def lab_page():
+    return render_template('lab.html')
+
+@app.route('/api/lab/overview')
+def api_lab_overview():
+    """9 Strateji Laboratuvarı portföyünün canlı durumunu ve öz-denetim günlüklerini döner."""
+    try:
+        from strategy_lab import initialize_lab_portfolios
+        from database import get_all_lab_portfolios, get_lab_positions, get_lab_audit_logs
+        initialize_lab_portfolios()
+        portfolios = get_all_lab_portfolios()
+        enriched = []
+        for p in portfolios:
+            open_pos = get_lab_positions(p['id'], status='OPEN')
+            closed_pos = [pos for pos in get_lab_positions(p['id']) if pos['status'] != 'OPEN'][:10]
+            open_val = sum((pos.get('current_price') or pos['entry_price']) * pos['lots'] for pos in open_pos)
+            total_val = round(float(p['cash_balance']) + float(open_val), 2)
+            init_cap = float(p['initial_capital'])
+            total_pnl_tl = round(total_val - init_cap, 2)
+            total_pnl_pct = round((total_pnl_tl / init_cap) * 100.0, 2) if init_cap > 0 else 0.0
+            win_rate = round((p['win_trades'] / p['total_trades']) * 100.0, 1) if p['total_trades'] > 0 else 0.0
+            enriched.append({
+                "id": p['id'],
+                "code": p['code'],
+                "name": p['name'],
+                "horizon_days": p['horizon_days'],
+                "version": p['version'],
+                "initial_capital": init_cap,
+                "cash_balance": round(float(p['cash_balance']), 2),
+                "total_value": total_val,
+                "pnl_tl": total_pnl_tl,
+                "pnl_pct": total_pnl_pct,
+                "total_trades": p['total_trades'],
+                "win_trades": p['win_trades'],
+                "win_rate": win_rate,
+                "params": p['params'],
+                "open_positions": open_pos,
+                "recent_closed": closed_pos
+            })
+        audits = get_lab_audit_logs(limit=25)
+        return jsonify({"status": "success", "portfolios": enriched, "audits": audits})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/lab/run', methods=['POST'])
+def api_lab_run():
+    """Strateji Laboratuvarı günlük döngüsünü manuel olarak tetikler."""
+    try:
+        from strategy_lab import run_lab_daily_cycle
+        res = run_lab_daily_cycle()
+        return jsonify({"status": "success", "data": res})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     # Flask sunucusunu başlat
     app.run(debug=True, host='0.0.0.0', port=5000)

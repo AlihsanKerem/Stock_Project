@@ -306,6 +306,26 @@ def check_predictions_job():
     except Exception as pe:
         print(f"Tahmin doğrulama hatası: {pe}")
 
+def run_strategy_lab_job():
+    """
+    Hafta içi 18:35'te 9 Strateji Laboratuvarı portföyünü günceller,
+    döngüsünü tamamlayanlarda Öz-Denetim (Self-Audit) çalıştırıp Telegram'a rapor atar.
+    """
+    if not is_weekday():
+        return
+
+    print("\n" + "="*50)
+    print("🧪 Strateji Laboratuvarı Günlük Döngüsü Başlıyor...")
+    print("="*50)
+    try:
+        from strategy_lab import run_lab_daily_cycle
+        res = run_lab_daily_cycle()
+        tg_msg = res.get("telegram_message")
+        if tg_msg:
+            asyncio.run(send_telegram_message(tg_msg))
+    except Exception as le:
+        print(f"Strateji Lab döngü hatası: {le}")
+
 def run_scheduler_thread():
     """Zamanlanmış görevleri arka plan iş parçacığında çalıştırır."""
     while True:
@@ -330,6 +350,13 @@ def main():
     schedule.every().day.at("10:30").do(check_predictions_job)
     schedule.every().day.at("14:00").do(check_predictions_job)
     schedule.every().day.at("18:15").do(check_predictions_job)
+
+    # Hafta içi 18:35'te Strateji Laboratuvarı (9 portföy + Öz-Denetim)
+    schedule.every().monday.at("18:35").do(run_strategy_lab_job)
+    schedule.every().tuesday.at("18:35").do(run_strategy_lab_job)
+    schedule.every().wednesday.at("18:35").do(run_strategy_lab_job)
+    schedule.every().thursday.at("18:35").do(run_strategy_lab_job)
+    schedule.every().friday.at("18:35").do(run_strategy_lab_job)
     
     # Her 30 dakikada bir takip listesini kontrol et
     schedule.every(30).minutes.do(check_tracked_stocks_job)

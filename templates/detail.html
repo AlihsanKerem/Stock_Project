@@ -18,6 +18,7 @@
             <nav class="nav-menu">
                 <a href="/" class="nav-link">Ana Sayfa</a>
                 <a href="/portfolio" class="nav-link">💼 Portföy</a>
+                <a href="/lab" class="nav-link">🧪 Strateji Lab</a>
                 <a href="/hisse-analiz" class="nav-link active">Tekli Hisse Analizi</a>
                 <a href="/takip" class="nav-link">Takip Listesi</a>
             </nav>
@@ -438,7 +439,7 @@
                     document.getElementById('errorContainer').style.display = 'block';
                     document.getElementById('errorContainer').textContent = "Bağlantı hatası oluştu: " + err;
                 });
-        });
+        }
         
         document.getElementById('symbolInput').addEventListener('keypress', function(e) {
             if(e.key === 'Enter') {

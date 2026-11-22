@@ -48,5 +48,14 @@ class TestNewAgentEndpoints(unittest.TestCase):
         self.assertEqual(data["status"], "success")
         self.assertEqual(data["data"]["simulation"]["win_rate_percent"], 68.0)
 
+    def test_lab_page_and_overview_api(self):
+        res_html = self.client.get("/lab")
+        self.assertEqual(res_html.status_code, 200)
+        res_api = self.client.get("/api/lab/overview")
+        self.assertEqual(res_api.status_code, 200)
+        data = res_api.get_json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(len(data["portfolios"]), 9)
+
 if __name__ == "__main__":
     unittest.main()

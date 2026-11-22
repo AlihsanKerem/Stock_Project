@@ -211,6 +211,57 @@ def init_db():
         )
     ''')
 
+    # Strateji Laboratuvarı (Çoklu Sanal Portföy & Öz-Denetim) Tabloları
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS lab_portfolios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            horizon_days INTEGER NOT NULL,
+            initial_capital REAL DEFAULT 2000.0,
+            cash_balance REAL DEFAULT 2000.0,
+            version INTEGER DEFAULT 1,
+            params_json TEXT NOT NULL,
+            param_bounds_json TEXT NOT NULL,
+            total_trades INTEGER DEFAULT 0,
+            win_trades INTEGER DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS lab_positions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            portfolio_id INTEGER NOT NULL,
+            symbol TEXT NOT NULL,
+            lots INTEGER NOT NULL,
+            entry_price REAL NOT NULL,
+            target_price REAL NOT NULL,
+            stop_loss REAL NOT NULL,
+            current_price REAL,
+            pnl_tl REAL DEFAULT 0.0,
+            pnl_pct REAL DEFAULT 0.0,
+            status TEXT DEFAULT 'OPEN',
+            opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            closed_at TIMESTAMP,
+            FOREIGN KEY(portfolio_id) REFERENCES lab_portfolios(id)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS lab_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            portfolio_id INTEGER NOT NULL,
+            version_from INTEGER NOT NULL,
+            version_to INTEGER NOT NULL,
+            cycle_pnl_pct REAL DEFAULT 0.0,
+            diagnosis TEXT NOT NULL,
+            param_changes_json TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(portfolio_id) REFERENCES lab_portfolios(id)
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -1047,6 +1098,167 @@ def get_recently_stopped_symbols(cooldown_days=5):
     rows = cursor.fetchall()
     conn.close()
     return {r[0].replace(".IS", "").strip().upper() for r in rows if r[0]}
+
+# ==========================================
+# 🧪 Strateji Laboratuvarı CRUD Fonksiyonları
+# ==========================================
+
+def upsert_lab_portfolio(code, name, horizon_days, initial_capital, cash_balance, version, params_json, param_bounds_json):
+    import json
+    conn = get_connection()
+    cursor = conn.cursor()
+    p_str = json.dumps(params_json, ensure_ascii=False) if isinstance(params_json, dict) else params_json
+    b_str = json.dumps(param_bounds_json, ensure_ascii=False) if isinstance(param_bounds_json, dict) else param_bounds_json
+
+    cursor.execute("SELECT id FROM lab_portfolios WHERE code = ?", (code,))
+    existing = cursor.fetchone()
+    if existing:
+        pid = existing[0]
+    else:
+        cursor.execute('''
+            INSERT INTO lab_portfolios (code, name, horizon_days, initial_capital, cash_balance, version, params_json, param_bounds_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (code, name, int(horizon_days), float(initial_capital), float(cash_balance), int(version), p_str, b_str))
+        pid = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return pid
+
+def get_all_lab_portfolios():
+    import json
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM lab_portfolios ORDER BY horizon_days ASC, code ASC")
+    rows = []
+    for r in cursor.fetchall():
+        d = dict(r)
+        d['params'] = json.loads(d['params_json'])
+        d['bounds'] = json.loads(d['param_bounds_json'])
+        rows.append(d)
+    conn.close()
+    return rows
+
+def get_lab_portfolio_by_code(code):
+    import json
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM lab_portfolios WHERE code = ?", (code,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d['params'] = json.loads(d['params_json'])
+    d['bounds'] = json.loads(d['param_bounds_json'])
+    return d
+
+def update_lab_portfolio_state(portfolio_id, cash_balance, version, params_dict, total_trades_inc=0, win_trades_inc=0):
+    import json
+    conn = get_connection()
+    cursor = conn.cursor()
+    p_str = json.dumps(params_dict, ensure_ascii=False) if isinstance(params_dict, dict) else params_dict
+    cursor.execute('''
+        UPDATE lab_portfolios
+        SET cash_balance = ?, version = ?, params_json = ?,
+            total_trades = total_trades + ?, win_trades = win_trades + ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (float(cash_balance), int(version), p_str, int(total_trades_inc), int(win_trades_inc), int(portfolio_id)))
+    conn.commit()
+    conn.close()
+
+def add_lab_position(portfolio_id, symbol, lots, entry_price, target_price, stop_loss):
+    sym = symbol.replace(".IS", "").strip().upper()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO lab_positions (portfolio_id, symbol, lots, entry_price, target_price, stop_loss, current_price, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')
+    ''', (int(portfolio_id), sym, int(lots), float(entry_price), float(target_price), float(stop_loss), float(entry_price)))
+    pos_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return pos_id
+
+def get_lab_positions(portfolio_id=None, status=None):
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    query = "SELECT * FROM lab_positions WHERE 1=1"
+    args = []
+    if portfolio_id is not None:
+        query += " AND portfolio_id = ?"
+        args.append(int(portfolio_id))
+    if status is not None:
+        query += " AND status = ?"
+        args.append(status)
+    query += " ORDER BY opened_at DESC"
+    cursor.execute(query, tuple(args))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def update_lab_position(pos_id, current_price, pnl_tl, pnl_pct, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    if status != 'OPEN':
+        cursor.execute('''
+            UPDATE lab_positions
+            SET current_price = ?, pnl_tl = ?, pnl_pct = ?, status = ?, closed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (float(current_price), float(pnl_tl), float(pnl_pct), status, int(pos_id)))
+    else:
+        cursor.execute('''
+            UPDATE lab_positions
+            SET current_price = ?, pnl_tl = ?, pnl_pct = ?, status = ?
+            WHERE id = ?
+        ''', (float(current_price), float(pnl_tl), float(pnl_pct), status, int(pos_id)))
+    conn.commit()
+    conn.close()
+
+def save_lab_audit_log(portfolio_id, version_from, version_to, cycle_pnl_pct, diagnosis, param_changes_dict):
+    import json
+    conn = get_connection()
+    cursor = conn.cursor()
+    c_str = json.dumps(param_changes_dict, ensure_ascii=False) if isinstance(param_changes_dict, dict) else param_changes_dict
+    cursor.execute('''
+        INSERT INTO lab_audit_logs (portfolio_id, version_from, version_to, cycle_pnl_pct, diagnosis, param_changes_json)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (int(portfolio_id), int(version_from), int(version_to), float(cycle_pnl_pct), diagnosis, c_str))
+    log_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return log_id
+
+def get_lab_audit_logs(portfolio_id=None, limit=30):
+    import json
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    if portfolio_id is not None:
+        cursor.execute('''
+            SELECT l.*, p.code as portfolio_code, p.name as portfolio_name
+            FROM lab_audit_logs l
+            JOIN lab_portfolios p ON l.portfolio_id = p.id
+            WHERE l.portfolio_id = ?
+            ORDER BY l.created_at DESC LIMIT ?
+        ''', (int(portfolio_id), int(limit)))
+    else:
+        cursor.execute('''
+            SELECT l.*, p.code as portfolio_code, p.name as portfolio_name
+            FROM lab_audit_logs l
+            JOIN lab_portfolios p ON l.portfolio_id = p.id
+            ORDER BY l.created_at DESC LIMIT ?
+        ''', (int(limit),))
+    rows = []
+    for r in cursor.fetchall():
+        d = dict(r)
+        d['param_changes'] = json.loads(d['param_changes_json'])
+        rows.append(d)
+    conn.close()
+    return rows
 
 # Initialize db when this file is imported
 init_db()
