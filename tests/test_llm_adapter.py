@@ -83,5 +83,22 @@ class TestLLMAdapter(unittest.TestCase):
             res = adapter.call_llm([{"role": "user", "content": "test"}])
             self.assertIn("Sistem Bildirimi", res)
 
+    @patch("agent_engine.time.sleep")
+    def test_gemini_429_retries_after_sleep(self, mock_sleep):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "gemini", "GEMINI_API_KEY": "AIzaTestKey"}, clear=True):
+            adapter = LLMAdapter()
+            mock_model = MagicMock()
+            ok_resp = MagicMock()
+            ok_resp.text = "İkinci denemede başarılı!"
+            mock_model.generate_content.side_effect = [
+                Exception("429 Quota exceeded for metric"),
+                ok_resp
+            ]
+            adapter.gemini_model = mock_model
+
+            res = adapter.call_llm([{"role": "user", "content": "test"}])
+            self.assertEqual(res, "İkinci denemede başarılı!")
+            mock_sleep.assert_called_once_with(16)
+
 if __name__ == "__main__":
     unittest.main()

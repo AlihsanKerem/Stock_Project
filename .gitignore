@@ -1,5 +1,7 @@
 .env
 stocks.db
 .venv
-
 __pycache__
+server_sync/
+*.log
+sunucudan_veri_cek.bat

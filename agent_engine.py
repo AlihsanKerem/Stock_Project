@@ -7,6 +7,7 @@ Pluggable (Gemini, Ollama, OpenAI-compatible, DeepSeek vb.) çalışan otonom fi
 import os
 import json
 import re
+import time
 import requests
 from dotenv import load_dotenv
 
@@ -112,17 +113,24 @@ class LLMAdapter:
         # 1. Gemini Sağlayıcısı (SDK veya REST API)
         if self.provider == "gemini":
             if self.gemini_model:
-                try:
-                    prompt_text = ""
-                    for msg in messages:
-                        role_prefix = "User" if msg["role"] == "user" else "System" if msg["role"] == "system" else "Model"
-                        prompt_text += f"{role_prefix}: {msg['content']}\n\n"
-                    
-                    response = self.gemini_model.generate_content(prompt_text)
-                    if response and response.text:
-                        return response.text
-                except Exception as ge:
-                    print(f"[LLMAdapter] Gemini SDK çağrı hatası: {ge}")
+                prompt_text = ""
+                for msg in messages:
+                    role_prefix = "User" if msg["role"] == "user" else "System" if msg["role"] == "system" else "Model"
+                    prompt_text += f"{role_prefix}: {msg['content']}\n\n"
+                for attempt in range(2):
+                    try:
+                        response = self.gemini_model.generate_content(prompt_text)
+                        if response and response.text:
+                            return response.text
+                        break
+                    except Exception as ge:
+                        err_str = str(ge).lower()
+                        if attempt == 0 and ("429" in err_str or "quota" in err_str or "rate" in err_str):
+                            print("⏳ [LLMAdapter] Gemini hız sınırı (429), 16 saniye beklenip tekrar deneniyor...")
+                            time.sleep(16)
+                            continue
+                        print(f"[LLMAdapter] Gemini SDK çağrı hatası: {ge}")
+                        break
 
             # REST Fallback for Gemini
             if self.gemini_key and self.gemini_key not in ["your_gemini_api_key_here", "your_google_gemini_api_key_here"]:
@@ -135,6 +143,10 @@ class LLMAdapter:
                             "parts": [{"text": msg["content"]}]
                         })
                     res = requests.post(url, json={"contents": contents}, timeout=30)
+                    if res.status_code == 429:
+                        print("⏳ [LLMAdapter] Gemini REST hız sınırı (429), 16 saniye beklenip tekrar deneniyor...")
+                        time.sleep(16)
+                        res = requests.post(url, json={"contents": contents}, timeout=30)
                     if res.status_code == 200:
                         data = res.json()
                         candidates = data.get("candidates", [])
